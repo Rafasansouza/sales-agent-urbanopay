@@ -1,0 +1,83 @@
+# =============================================================================
+# Infraestrutura local de desenvolvimento — UrbanoPay Mobilidade
+# =============================================================================
+# Fonte: ADR-004 (PostgreSQL + pgvector), ADR-009 (Redis), ADR-008 (OTel).
+#
+# Nenhuma credencial está embutida neste arquivo: todos os valores vêm do
+# `.env` da raiz, que é ignorado pelo Git.
+#
+# Langfuse não possui container aqui. O modo de implantação (self-hosted x
+# cloud) permanece em aberto — ver H-04 em docs/OPEN-QUESTIONS.md. A
+# integração é configurada por ambiente e está desligada por padrão.
+# =============================================================================
+
+name: urbanopay
+
+services:
+  # ---------------------------------------------------------------------------
+  # PostgreSQL com pgvector — source of truth transacional (ADR-004)
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: pgvector/pgvector:pg17
+    container_name: urbanopay-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-urbanopay}
+      POSTGRES_USER: ${POSTGRES_USER:-urbanopay}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+      # Locale pt-BR para ordenação previsível em dados de demonstração.
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8"
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Scripts de inicialização rodam apenas na primeira criação do volume.
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test:
+        ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-urbanopay} -d ${POSTGRES_DB:-urbanopay}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # ---------------------------------------------------------------------------
+  # Redis — estado efêmero apenas (ADR-009)
+  # ---------------------------------------------------------------------------
+  # Proibido como autoridade de saldo, Order, Payment, Fulfillment, ledger ou
+  # idempotência financeira. Perder este container não pode perder histórico.
+  redis:
+    image: redis:7-alpine
+    container_name: urbanopay-redis
+    restart: unless-stopped
+    # `appendonly no`: os dados aqui são descartáveis por definição.
+    command: ["redis-server", "--appendonly", "no", "--save", ""]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # ---------------------------------------------------------------------------
+  # OpenTelemetry Collector — telemetria transversal (ADR-008)
+  # ---------------------------------------------------------------------------
+  # Recebe OTLP da API e exporta para o console do container. Nenhum destino
+  # remoto está configurado: telemetria não sai da máquina local.
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.116.1
+    container_name: urbanopay-otel-collector
+    restart: unless-stopped
+    command: ["--config=/etc/otel/collector.yaml"]
+    volumes:
+      - ./otel/collector.yaml:/etc/otel/collector.yaml:ro
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+
+volumes:
+  # Volume nomeado: `docker compose down` preserva os dados.
+  # `docker compose down -v` os apaga e está bloqueado pelo harness.
+  postgres_data:
+    name: urbanopay_postgres_data
