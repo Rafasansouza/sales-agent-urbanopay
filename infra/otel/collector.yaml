@@ -1,0 +1,81 @@
+# =============================================================================
+# OpenTelemetry Collector — configuração de desenvolvimento local
+# =============================================================================
+# Fonte: ADR-008.
+#
+# Escopo deliberadamente mínimo: recebe OTLP da API e imprime no console do
+# container. Nenhum destino remoto está configurado — a telemetria não sai da
+# máquina local.
+#
+# Regras que a instrumentação da aplicação precisa respeitar (ADR-008):
+#   - OTP nunca é registrado;
+#   - CPF, número de cartão, secrets e qr_token são mascarados ou removidos;
+#   - traces não são fonte de verdade financeira;
+#   - se a sanitização falhar, preferir não exportar.
+#
+# A sanitização é responsabilidade da aplicação, não deste collector. O
+# processor `attributes` abaixo é apenas uma rede de segurança adicional.
+# =============================================================================
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  # Protege contra picos de memória sem derrubar o collector.
+  memory_limiter:
+    check_interval: 5s
+    limit_mib: 256
+    spike_limit_mib: 64
+
+  batch:
+    timeout: 5s
+    send_batch_size: 512
+
+  # Rede de segurança: remove atributos que nunca devem existir em telemetria.
+  # A responsabilidade primária de não emitir esses campos é da aplicação.
+  attributes/redact:
+    actions:
+      - key: otp
+        action: delete
+      - key: otp_code
+        action: delete
+      - key: cpf
+        action: delete
+      - key: card_number
+        action: delete
+      - key: qr_token
+        action: delete
+      - key: access_token
+        action: delete
+      - key: api_key
+        action: delete
+      - key: authorization
+        action: delete
+
+exporters:
+  # Saída no log do container: `docker compose logs -f otel-collector`.
+  debug:
+    verbosity: normal
+
+service:
+  telemetry:
+    logs:
+      level: info
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, attributes/redact, batch]
+      exporters: [debug]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [debug]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, attributes/redact, batch]
+      exporters: [debug]

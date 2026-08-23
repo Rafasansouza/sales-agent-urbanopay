@@ -1,0 +1,216 @@
+# =============================================================================
+# CI — UrbanoPay Mobilidade
+# =============================================================================
+# Fonte: AGENT-HARNESS §15 — a CI valida formato, lint, typecheck, testes e
+# security checks.
+#
+# Invariante do harness (§16): a CI não é contornada removendo checks. Um check
+# que falha significa corrigir o código, nunca afrouxar o check.
+# =============================================================================
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Cancela execuções antigas do mesmo ref para não desperdiçar runner.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Instalação estritamente a partir do uv.lock (ADR-013).
+  UV_FROZEN: "1"
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Qualidade: formatação, lint e tipos
+  # ---------------------------------------------------------------------------
+  quality:
+    name: Qualidade
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Instalar Python
+        run: uv python install
+
+      - name: Sincronizar ambiente
+        run: uv sync --frozen
+
+      - name: Verificar formatação
+        run: uv run ruff format --check .
+
+      - name: Lint
+        run: uv run ruff check --output-format=github .
+
+      - name: Verificação de tipos
+        run: uv run mypy
+
+  # ---------------------------------------------------------------------------
+  # Testes unitários: regra de domínio, sem I/O
+  # ---------------------------------------------------------------------------
+  test-unit:
+    name: Testes unitários
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Instalar Python
+        run: uv python install
+
+      - name: Sincronizar ambiente
+        run: uv sync --frozen
+
+      - name: Executar testes unitários
+        run: uv run pytest -m unit
+
+  # ---------------------------------------------------------------------------
+  # Testes de integração: fronteira de banco e de provider
+  # ---------------------------------------------------------------------------
+  # Nesta fase do bootstrap a coleta é vazia: ADR-012 (persistência) está com
+  # status Proposta e as SPECs não foram implementadas. O job existe para que a
+  # infraestrutura de CI esteja pronta e validada desde já.
+  test-integration:
+    name: Testes de integração
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_DB: urbanopay_test
+          POSTGRES_USER: urbanopay
+          POSTGRES_PASSWORD: urbanopay_ci_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U urbanopay -d urbanopay_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    env:
+      # Credenciais efêmeras do runner, válidas apenas durante o job.
+      DATABASE_URL: postgresql://urbanopay:urbanopay_ci_only@localhost:5432/urbanopay_test
+      REDIS_URL: redis://localhost:6379/0
+      APP_ENV: ci
+      # Providers falsos: nenhuma chamada externa real em CI (ADR-007, ADR-010).
+      LLM_PROVIDER: fake
+      PAYMENT_PROVIDER: fake
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Instalar Python
+        run: uv python install
+
+      - name: Sincronizar ambiente
+        run: uv sync --frozen
+
+      - name: Executar testes de integração
+        # A camada ainda não possui testes: ADR-012 (persistência) está com
+        # status Proposta. O pytest retorna 5 quando nada é coletado; toleramos
+        # SOMENTE esse código, e de forma ruidosa. Qualquer outro código
+        # reprova o job.
+        #
+        # ATENÇÃO: remover esta tolerância quando a camada tiver testes.
+        # Ver H-07 em docs/OPEN-QUESTIONS.md.
+        run: |
+          set +e
+          uv run pytest -m integration
+          code=$?
+          set -e
+          if [ "$code" -eq 5 ]; then
+            echo "::warning::Nenhum teste de integracao coletado. Esperado nesta fase (ADR-012 Proposta)."
+            exit 0
+          fi
+          exit "$code"
+
+  # ---------------------------------------------------------------------------
+  # Segurança: secrets e dependências
+  # ---------------------------------------------------------------------------
+  security:
+    name: Segurança
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Histórico completo: necessário para varredura de secrets no diff.
+          fetch-depth: 0
+
+      - name: Varredura de secrets
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Instalar uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Instalar Python
+        run: uv python install
+
+      - name: Sincronizar ambiente
+        run: uv sync --frozen
+
+      - name: Auditar dependências
+        run: uvx pip-audit --strict
+
+  # ---------------------------------------------------------------------------
+  # Conformidade com o harness
+  # ---------------------------------------------------------------------------
+  harness:
+    name: Conformidade do harness
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validar settings.json do harness
+        run: python -c "import json; json.load(open('.claude/settings.json')); print('settings.json valido')"
+
+      - name: Verificar que o .env nao foi commitado
+        run: |
+          if git ls-files --error-unmatch .env 2>/dev/null; then
+            echo "ERRO: .env esta versionado. Secrets nunca sao commitados."
+            exit 1
+          fi
+          echo ".env nao esta versionado: OK"
+
+      - name: Verificar integridade do uv.lock
+        run: |
+          uvx --version >/dev/null 2>&1 || true
+          test -f uv.lock || { echo "ERRO: uv.lock ausente. ADR-013 exige lockfile versionado."; exit 1; }
+          echo "uv.lock presente: OK"

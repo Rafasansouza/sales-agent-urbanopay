@@ -1,0 +1,25 @@
+# Normalização de fim de linha.
+# O repositório é desenvolvido em Windows e executado em CI Linux;
+# manter LF no repositório evita divergência em hooks e scripts.
+* text=auto eol=lf
+
+# Scripts que precisam obrigatoriamente de LF no destino.
+*.sh        text eol=lf
+*.py        text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+Makefile    text eol=lf
+
+# Scripts PowerShell são executados apenas no Windows.
+*.ps1       text eol=crlf
+
+# Arquivos binários.
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.ico       binary
+*.pdf       binary
+
+# O lockfile do uv é gerado por ferramenta: evita ruído de diff.
+uv.lock     linguist-generated=true -diff

@@ -1,0 +1,43 @@
+# =============================================================================
+# apps/api — backend FastAPI da UrbanoPay Mobilidade
+# =============================================================================
+# Membro do workspace uv declarado na raiz. A configuração de Ruff, mypy e
+# pytest é compartilhada e vive no `pyproject.toml` da raiz (ADR-013).
+#
+# Regra para novas dependências: dependência estrutural exige ADR antes da
+# instalação (CLAUDE.md). Adicione com `uv add` e commite o `uv.lock` na mesma
+# mudança.
+# =============================================================================
+
+[project]
+name = "urbanopay"
+version = "0.1.0"
+description = "API do assistente inteligente de vendas da UrbanoPay Mobilidade"
+readme = "README.md"
+requires-python = ">=3.13,<3.14"
+
+dependencies = [
+    # Camada HTTP (ADR-006).
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.34",
+    # Contratos tipados e configuração por ambiente (ADR-006).
+    "pydantic>=2.10",
+    "pydantic-settings>=2.7",
+]
+
+# Dependências deliberadamente ausentes nesta fase:
+#
+#   - driver PostgreSQL, ORM e ferramenta de migration: ADR-012 está com
+#     status Proposta;
+#   - langgraph e SDK de LLM: SPEC-004 não foi implementada e a
+#     compatibilidade com Python 3.13 ainda não foi validada (ver H-05 em
+#     docs/OPEN-QUESTIONS.md);
+#   - SDK do Mercado Pago: SPEC-003 não foi implementada;
+#   - OpenTelemetry e Langfuse: a instrumentação acompanha as SPECs.
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/urbanopay"]

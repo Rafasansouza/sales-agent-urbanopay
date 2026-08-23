@@ -10,11 +10,18 @@ CLAUDE.local.md
 # Python
 __pycache__/
 *.py[cod]
+*.egg-info/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
 .venv/
 venv/
+
+# Cobertura de testes
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
 
 # Node
 node_modules/
@@ -32,6 +39,10 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Infraestrutura local (dados de container e telemetria exportada)
+infra/.data/
+infra/otel/out/
 
 # Secrets / certificates
 *.pem
