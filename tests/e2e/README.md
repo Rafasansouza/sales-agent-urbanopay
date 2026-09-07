@@ -45,4 +45,6 @@ Vazio. Depende da implementação de SPEC-001 a SPEC-005.
 catálogo, e o PRD §19 mantém pendentes as regras de Passe Diário e de Pacote 10
 Viagens. Somente `RECHARGE` é implementável a partir dos documentos aceitos.
 
-⚠️ A jornada com aprovação humana está bloqueada por **C-01** e **A-07**.
+⚠️ A jornada com aprovação humana tem domínio e state machine definidos
+(C-01 resolvida), mas depende de **A-07** — a superfície pela qual um humano
+decide ainda não existe.

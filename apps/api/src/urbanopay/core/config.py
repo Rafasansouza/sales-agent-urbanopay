@@ -90,6 +90,14 @@ class Settings(BaseSettings):
     otp_ttl_minutes: int = 5
     otp_max_attempts: int = 5
 
+    # --- Orders & Payments (SPEC-003) ---
+    # TTLs com os defaults que a SPEC-003 §4 e §5.1 fixam, configuráveis.
+    # Não há TTL após a confirmação do cliente, por decisão documentada: os
+    # valores estão congelados, `REQUIRES_APPROVAL` pode aguardar decisão
+    # humana e `CONFIRMED` pode aguardar a criação do Payment.
+    quote_ttl_minutes: int = 10
+    order_draft_ttl_minutes: int = 10
+
     # --- LLM (ADR-010) ---
     # O acesso em runtime sempre passa por uma abstração de provider. Nenhum
     # node instancia SDK diretamente.

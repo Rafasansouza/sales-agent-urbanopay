@@ -3,13 +3,17 @@
 Fonte: ADR-012 — "o domínio não importa SQLAlchemy", verificado por teste, não
 apenas por regra escrita.
 
-Cobre dois alvos:
+Cobre três alvos:
 
 1. `modules/*/domain/**` — nenhum arquivo pode importar `sqlalchemy`,
-   `psycopg` ou `alembic`. Hoje nenhum módulo possui `domain/`; o teste passa
-   em vácuo e passa a valer automaticamente quando o primeiro nascer.
+   `psycopg` ou `alembic`. Hoje existem cinco domínios implementados (`fare`,
+   `identity`, `cards`, `orders`, `approvals`, `payments`), então a asserção
+   não é mais vácua.
 2. `core/persistence.py` — o port do Unit of Work é a fronteira declarada e
-   também não pode importar persistência. Esta é a asserção não-vácua atual.
+   também não pode importar persistência.
+3. `core/idempotency.py` — o contrato transversal de idempotência segue a
+   mesma regra: os contratos ficam em `core`, a implementação SQLAlchemy em
+   `db/idempotency.py`.
 
 O detector é testado contra arquivos sintéticos para provar que **falha de
 verdade** quando o vazamento existir.
@@ -74,13 +78,27 @@ def test_dominio_nao_importa_persistencia() -> None:
 
 
 @pytest.mark.unit
-def test_port_de_persistencia_nao_importa_sqlalchemy() -> None:
-    """`core/persistence.py` define o port e não pode conhecer a implementação."""
-    port = SRC_ROOT / "core" / "persistence.py"
-    assert port.is_file(), "core/persistence.py deveria existir (ADR-012)"
+def test_dominio_implementado_nao_e_vacuo() -> None:
+    """Garante que o teste acima realmente varre arquivos.
+
+    Sem esta verificação, apagar `modules/*/domain/` faria o teste de fronteira
+    passar por vacuidade em vez de por conformidade.
+    """
+    dominios = {path.parents[1].name for path in _domain_files()}
+
+    assert {"fare", "identity", "cards", "orders", "approvals", "payments"} <= dominios
+    assert len(_domain_files()) > 20
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("modulo", ["persistence.py", "idempotency.py"])
+def test_contrato_transversal_nao_importa_sqlalchemy(modulo: str) -> None:
+    """Contratos de `core` não podem conhecer a implementação (ADR-012)."""
+    port = SRC_ROOT / "core" / modulo
+    assert port.is_file(), f"core/{modulo} deveria existir (ADR-012)"
 
     found = find_forbidden_imports(port.read_text(encoding="utf-8"), FORBIDDEN_IN_DOMAIN)
-    assert not found, f"core/persistence.py importa infraestrutura proibida: {found}"
+    assert not found, f"core/{modulo} importa infraestrutura proibida: {found}"
 
 
 @pytest.mark.unit

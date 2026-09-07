@@ -4,9 +4,12 @@ Validam que a infraestrutura do Alembic funciona contra PostgreSQL real:
 `upgrade head` executa e `alembic check` não encontra divergência entre o
 metadata da aplicação e o schema do banco.
 
-Nesta fase não existe nenhuma revision — decisão do ADR-012 de não criar
-migration artificial. O ciclo `upgrade → downgrade → upgrade` só ganhará teste
-quando existir uma revision real, junto com a primeira SPEC.
+A cadeia atual é `fare0001 → fare0002 → idc0001 → ord0001 → pay0001`. Os
+testes de `alembic check` e do ciclo completo `head → base → head` valem para
+toda a cadeia automaticamente: qualquer divergência entre `models.py` e
+migration, em qualquer módulo, reprova aqui. Os ciclos **escopados** existem
+para provar que a revision de cada SPEC é reversível sem danificar as
+anteriores.
 
 Estes testes usam a API síncrona do Alembic (o `env.py` usa engine síncrono,
 como o ADR permite), por isso não levam o marcador `asyncio`.
@@ -112,6 +115,56 @@ def test_ciclo_escopado_spec002(settings: Settings) -> None:
         assert {"customers", "sessions", "auth_challenges", "cards"}.issubset(tables)
     finally:
         engine.dispose()
+
+
+@pytest.mark.integration
+def test_ciclo_escopado_spec003(settings: Settings) -> None:
+    """`head → idc0001 → head`: as revisions da SPEC-003 são reversíveis.
+
+    Descer até `idc0001` remove `pay0001` e `ord0001` — as oito tabelas de
+    Quote, Order, Approval, Payment, evento de provider e idempotência — sem
+    tocar identidade, cartões nem o seed tarifário.
+    """
+    spec003_tables = {
+        "quotes",
+        "quote_items",
+        "orders",
+        "order_items",
+        "approvals",
+        "idempotency_records",
+        "payments",
+        "payment_events",
+    }
+    spec002_tables = {"customers", "sessions", "auth_challenges", "cards"}
+
+    cfg = alembic_config()
+    command.upgrade(cfg, "head")
+    command.downgrade(cfg, "idc0001")
+
+    engine = sa.create_engine(build_database_url(settings))
+    try:
+        with engine.connect() as conn:
+            tables = set(sa.inspect(conn).get_table_names())
+        assert spec003_tables.isdisjoint(tables)
+        assert spec002_tables.issubset(tables)
+        assert {"fares", "fare_rules"}.issubset(tables)
+    finally:
+        engine.dispose()
+
+    command.upgrade(cfg, "head")
+
+    engine = sa.create_engine(build_database_url(settings))
+    try:
+        with engine.connect() as conn:
+            tables = set(sa.inspect(conn).get_table_names())
+        assert spec003_tables.issubset(tables)
+    finally:
+        engine.dispose()
+
+    # O seed tarifário atravessa o ciclo intacto.
+    fares, rules = _seed_counts(settings)
+    assert fares == OFFICIAL_FARES_COUNT
+    assert rules == OFFICIAL_RULES_COUNT
 
 
 @pytest.mark.integration
