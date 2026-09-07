@@ -1,4 +1,4 @@
-"""Repository SQLAlchemy do módulo cards (ADR-012, SPEC-002 §5)."""
+"""Repositories SQLAlchemy do módulo cards (ADR-012, SPEC-002 §5, SPEC-005 §7)."""
 
 from __future__ import annotations
 
@@ -11,6 +11,8 @@ from urbanopay.modules.cards.domain.enums import CardStatus, FareProfile
 from urbanopay.modules.cards.infrastructure.models import CardModel
 
 if TYPE_CHECKING:
+    from datetime import datetime
+    from decimal import Decimal
     from uuid import UUID
 
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -54,3 +56,28 @@ class SqlAlchemyCardRepository:
         )
         model = (await self._session.execute(stmt)).scalar_one_or_none()
         return _to_card(model) if model is not None else None
+
+
+class SqlAlchemyCardBalanceRepository:
+    """Implementação do port `CardBalanceRepository` (SPEC-005 §7).
+
+    Nunca comita: a fronteira transacional é do Unit of Work de quem credita,
+    porque ledger, saldo e status precisam comitar juntos.
+    """
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def get_for_update(self, card_id: UUID) -> Card | None:
+        stmt = sa.select(CardModel).where(CardModel.id == card_id).with_for_update()
+        model = (await self._session.execute(stmt)).scalar_one_or_none()
+        return _to_card(model) if model is not None else None
+
+    async def apply_credit(self, *, card_id: UUID, new_balance: Decimal, at: datetime) -> None:
+        """Grava o saldo resultante. Não soma e não arredonda (ADR-012)."""
+        stmt = (
+            sa.update(CardModel)
+            .where(CardModel.id == card_id)
+            .values(balance=new_balance, updated_at=at)
+        )
+        await self._session.execute(stmt)
