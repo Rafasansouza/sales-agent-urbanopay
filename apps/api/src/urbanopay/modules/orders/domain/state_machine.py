@@ -53,7 +53,11 @@ _ALLOWED_TRANSITIONS: dict[OrderStatus, frozenset[OrderStatus]] = {
     OrderStatus.PAID: frozenset({OrderStatus.FULFILLING}),
     OrderStatus.FULFILLING: frozenset({OrderStatus.COMPLETED, OrderStatus.FULFILLMENT_FAILED}),
     OrderStatus.COMPLETED: frozenset(),
-    OrderStatus.FULFILLMENT_FAILED: frozenset(),
+    # Reentrada por comando explícito (SPEC-003 §14, SPEC-005 §5.1): um
+    # fulfillment em FAILED ou RECONCILIATION_REQUIRED deixa o Order aqui, e
+    # sem esta aresta um cartão reativado nunca receberia o crédito de um
+    # Order já pago. Nunca automática, nunca gera nova cobrança.
+    OrderStatus.FULFILLMENT_FAILED: frozenset({OrderStatus.FULFILLING}),
     OrderStatus.CANCELLED: frozenset(),
     OrderStatus.EXPIRED: frozenset(),
 }
@@ -201,6 +205,60 @@ def mark_paid(order: Order, at: datetime) -> Order:
     if order.status is not OrderStatus.PAYMENT_PENDING:
         raise InvalidOrderStateError
     return _transition(order, OrderStatus.PAID, at)
+
+
+def start_fulfillment(order: Order, at: datetime) -> Order:
+    """`PAID → FULFILLING` no início do fulfillment (SPEC-005 §5.2).
+
+    Em `RECHARGE` esta transição e as seguintes ocorrem na **mesma
+    transação**, então `FULFILLING` não é observável de fora. Ainda assim ela
+    existe: o grafo da §14 não admite `PAID → COMPLETED` direto, e criar esse
+    atalho exigiria alterar a máquina de estados aceita.
+
+    Aceita também `FULFILLMENT_FAILED` como origem: é a reentrada por comando
+    explícito prevista em SPEC-005 §5.1.
+
+    Idempotente: um Order já em `FULFILLING` é devolvido inalterado, para que
+    uma reentrada não precise distinguir os dois casos.
+    """
+    if order.status is OrderStatus.FULFILLING:
+        return order
+    if order.status not in (OrderStatus.PAID, OrderStatus.FULFILLMENT_FAILED):
+        raise InvalidOrderStateError
+    return _transition(order, OrderStatus.FULFILLING, at)
+
+
+def complete_fulfillment(order: Order, at: datetime) -> Order:
+    """`FULFILLING → COMPLETED` (SPEC-005 §5.2).
+
+    Encerra a jornada do Order. Alcançável **exclusivamente** a partir de um
+    `Fulfillment COMPLETED`, isto é, de um efeito comercial já aplicado e
+    registrado em ledger na mesma transação.
+
+    Idempotente: webhook e reentrada podem entregar o mesmo fato duas vezes.
+    """
+    if order.status is OrderStatus.COMPLETED:
+        return order
+    if order.status is not OrderStatus.FULFILLING:
+        raise InvalidOrderStateError
+    return _transition(order, OrderStatus.COMPLETED, at)
+
+
+def fail_fulfillment(order: Order, at: datetime) -> Order:
+    """`FULFILLING → FULFILLMENT_FAILED` (SPEC-005 §5.2).
+
+    Cobre tanto `Fulfillment FAILED` quanto `RECONCILIATION_REQUIRED`: o Order
+    guarda apenas o estado coarse-grained da jornada, e a distinção fina fica
+    no Fulfillment, que é a autoridade detalhada.
+
+    **Não** gera nova cobrança e **não** reverte o pagamento: o Payment
+    permanece aprovado (SPEC-003 §15).
+    """
+    if order.status is OrderStatus.FULFILLMENT_FAILED:
+        return order
+    if order.status is not OrderStatus.FULFILLING:
+        raise InvalidOrderStateError
+    return _transition(order, OrderStatus.FULFILLMENT_FAILED, at)
 
 
 def release_for_new_attempt(order: Order, at: datetime) -> Order:

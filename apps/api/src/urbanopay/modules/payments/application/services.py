@@ -8,7 +8,8 @@ automática. Três contratos governam tudo aqui:
    evento de domínio e não chega a nenhuma função daqui.
 2. **Nenhuma transação de banco permanece aberta durante a chamada ao
    provider** (§11.2). A criação usa duas fases explícitas.
-3. **Ordem global de lock `Order` → `Payment`.** Toda escrita que toque os
+3. **Ordem de lock `Order` → `Payment`**, subconjunto da ordem global
+   `Order → Approval → Payment → Card → Fulfillment`. Toda escrita que toque os
    dois agregados adquire os locks nessa ordem, sem exceção — inclusive no
    caminho do webhook, onde é tentador travar primeiro o Payment que o evento
    identificou.
