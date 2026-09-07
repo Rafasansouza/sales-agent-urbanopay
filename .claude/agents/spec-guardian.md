@@ -48,7 +48,7 @@ achado.
 - **Requisito violado** — a SPEC diz X e o código faz Y.
 - **Pendência preenchida silenciosamente** — a implementação escolheu uma
   interpretação de um item de `OPEN-QUESTIONS.md` sem decisão documental.
-  Vale especialmente para C-01, C-02, A-05, A-06 e A-10.
+  Vale especialmente para A-05, A-06 e A-07.
 - **Valor inventado** — TTL, limite, prazo de validade ou threshold que não
   aparece em nenhum documento.
 - **Erro tipado ausente** — a SPEC define um erro que a implementação não
