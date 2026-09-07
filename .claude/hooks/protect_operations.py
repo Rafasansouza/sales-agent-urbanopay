@@ -16,17 +16,39 @@ E pede confirmação humana (`ask`) para:
 Contrato: falha aberto. Qualquer erro inesperado resulta em saída 0 sem
 decisão, delegando o controle às `permissions` do `settings.json`. Este hook é
 defesa em profundidade, não a única barreira.
+
+## Raiz de análise ancorada, nunca herdada do cwd
+
+Nem a branch consultada nem a resolução de caminho dependem do diretório de
+trabalho. Ambas partem de `CLAUDE_PROJECT_DIR` e, na sua ausência, da
+localização deste arquivo.
+
+Aqui isso não é questão de escopo, é de **proteção**: com o cwd herdado, um
+`cd` para outro repositório faria a branch avaliada ser a do repositório
+errado — e uma branch não resolvida vira `None`, que não pertence a
+`PROTECTED_BRANCHES`, fazendo a proibição de editar em `main` simplesmente não
+se aplicar. Do mesmo modo, um caminho relativo resolvido contra o cwd errado
+faria um PRD/SPEC/ADR existente parecer inexistente, e a confirmação humana
+seria pulada. Nos dois casos, em silêncio.
+
+O caminho recebido da tool **nunca** entra na composição do comando Git: o
+`-C` recebe apenas a raiz, derivada do ambiente ou do próprio arquivo. Os
+argumentos seguem separados, sem `shell=True`.
 """
 
 from __future__ import annotations
 
 import json
+import os
 import re
 import subprocess
 import sys
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 
 GIT_TIMEOUT_SECONDS = 5
+
+# Este arquivo vive em `<raiz>/.claude/hooks/`, logo a raiz é o segundo pai.
+_ROOT_DEPTH_FROM_THIS_FILE = 2
 
 PROTECTED_BRANCHES = frozenset({"main", "master"})
 
@@ -132,9 +154,37 @@ ASK_COMMANDS: tuple[tuple[re.Pattern[str], str], ...] = (
 )
 
 
+def project_root() -> Path:
+    """Raiz canônica do projeto, resolvida sem consultar o cwd.
+
+    `CLAUDE_PROJECT_DIR` quando disponível; caso contrário, a localização
+    física deste arquivo — que não depende de onde o processo foi iniciado.
+    """
+    raw = os.environ.get("CLAUDE_PROJECT_DIR")
+    if raw:
+        candidate = Path(raw)
+        if candidate.is_dir():
+            return candidate.resolve()
+
+    return Path(__file__).resolve().parents[_ROOT_DEPTH_FROM_THIS_FILE]
+
+
 def normalize(path: str) -> str:
     """Normaliza separadores para comparação estável entre Windows e POSIX."""
     return PurePosixPath(path.replace("\\", "/")).as_posix()
+
+
+def resolve_against_root(raw_path: str, root: Path) -> Path:
+    """Resolve o caminho recebido da tool contra a raiz, nunca contra o cwd.
+
+    Caminho absoluto é usado como veio. Relativo é ancorado na raiz do
+    projeto: é o que impede que um documento de autoridade existente seja
+    julgado inexistente só porque a sessão trocou de diretório.
+    """
+    candidate = Path(raw_path)
+    if candidate.is_absolute():
+        return candidate
+    return root / candidate
 
 
 def deny(reason: str) -> None:
@@ -156,14 +206,21 @@ def emit(decision: str, reason: str) -> None:
     sys.stdout.write(json.dumps(payload))
 
 
-def current_branch() -> str | None:
+def current_branch(root: Path) -> str | None:
+    """Branch do repositório do PROJETO, não do que contém o cwd.
+
+    `-C <raiz>` é o que garante isso. Fail-open preservado: qualquer falha
+    devolve `None` — mas agora por indisponibilidade real do git, nunca por
+    cwd apontando para o lugar errado.
+    """
     try:
         result = subprocess.run(
-            ("git", "rev-parse", "--abbrev-ref", "HEAD"),
+            ("git", "-C", str(root), "rev-parse", "--abbrev-ref", "HEAD"),
             capture_output=True,
             text=True,
             timeout=GIT_TIMEOUT_SECONDS,
             check=False,
+            cwd=root,
         )
     except (OSError, subprocess.SubprocessError):
         return None
@@ -173,16 +230,15 @@ def current_branch() -> str | None:
     return result.stdout.strip()
 
 
-def file_exists(path: str) -> bool:
-    from pathlib import Path
-
+def file_exists(raw_path: str, root: Path) -> bool:
+    """Existência verificada no caminho ancorado na raiz do projeto."""
     try:
-        return Path(path).exists()
+        return resolve_against_root(raw_path, root).exists()
     except OSError:
         return False
 
 
-def check_file_operation(tool_name: str, tool_input: dict) -> bool:
+def check_file_operation(tool_name: str, tool_input: dict, root: Path) -> bool:
     """Avalia operações de arquivo. Devolve True se uma decisão foi emitida."""
     raw_path = tool_input.get("file_path") or tool_input.get("notebook_path") or ""
     if not raw_path:
@@ -205,7 +261,7 @@ def check_file_operation(tool_name: str, tool_input: dict) -> bool:
         return False
 
     # 2. Edição em branch protegida.
-    branch = current_branch()
+    branch = current_branch(root)
     if branch in PROTECTED_BRANCHES:
         deny(
             f"Edição bloqueada: a branch atual é `{branch}`. CLAUDE.md e "
@@ -216,7 +272,7 @@ def check_file_operation(tool_name: str, tool_input: dict) -> bool:
 
     # 3. Documentos de autoridade já existentes.
     for pattern in AUTHORITY_DIR_PATTERNS:
-        if pattern.search(path) and file_exists(str(raw_path)):
+        if pattern.search(path) and file_exists(str(raw_path), root):
             ask(
                 f"`{path}` é documento de autoridade (PRD/SPEC/ADR). CLAUDE.md "
                 "determina que PRD, SPEC e ADR não sejam alterados "
@@ -261,8 +317,10 @@ def main() -> int:
     if not isinstance(tool_input, dict):
         return 0
 
+    root = project_root()
+
     is_file_tool = tool_name in WRITE_TOOLS or tool_name in READ_TOOLS
-    if is_file_tool and check_file_operation(tool_name, tool_input):
+    if is_file_tool and check_file_operation(tool_name, tool_input, root):
         return 0
 
     if tool_name in ("Bash", "PowerShell") and check_bash_command(tool_input):

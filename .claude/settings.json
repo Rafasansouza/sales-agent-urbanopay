@@ -90,45 +90,51 @@
     ]
   },
   "hooks": {
-    "SessionStart": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python",
-            "args": [".claude/hooks/session_context.py"],
-            "timeout": 15,
-            "statusMessage": "Carregando contexto do projeto"
-          }
-        ]
-      }
-    ],
-    "PreToolUse": [
-      {
-        "matcher": "Edit|Write|NotebookEdit|MultiEdit|Read|Bash|PowerShell",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python",
-            "args": [".claude/hooks/protect_operations.py"],
-            "timeout": 15,
-            "statusMessage": "Verificando operacoes protegidas"
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python",
-            "args": [".claude/hooks/verify_before_stop.py"],
-            "timeout": 120,
-            "statusMessage": "Verificacoes rapidas"
-          }
-        ]
-      }
-    ]
+  "SessionStart": [
+    {
+      "hooks": [
+            {
+              "type": "command",
+              "command": "python",
+              "args": [
+                "${CLAUDE_PROJECT_DIR}/.claude/hooks/session_context.py"
+              ],
+              "timeout": 15,
+              "statusMessage": "Carregando contexto do projeto"
+            }
+          ]
+        }
+      ],
+      "PreToolUse": [
+        {
+          "matcher": "Edit|Write|NotebookEdit|MultiEdit|Read|Bash|PowerShell",
+          "hooks": [
+            {
+              "type": "command",
+              "command": "python",
+              "args": [
+                "${CLAUDE_PROJECT_DIR}/.claude/hooks/protect_operations.py"
+              ],
+              "timeout": 15,
+              "statusMessage": "Verificando operacoes protegidas"
+            }
+          ]
+        }
+      ],
+      "Stop": [
+        {
+          "hooks": [
+            {
+              "type": "command",
+              "command": "python",
+              "args": [
+                "${CLAUDE_PROJECT_DIR}/.claude/hooks/verify_before_stop.py"
+              ],
+              "timeout": 120,
+              "statusMessage": "Verificacoes rapidas"
+            }
+          ]
+        }
+      ]
+    }
   }
-}
