@@ -5,7 +5,8 @@ Estes testes usam **duas sessões distintas** em `asyncio.gather`, porque uma
 assim `SELECT ... FOR UPDATE` e os índices únicos parciais são exercitados de
 verdade — o dublê em memória dos testes unit não modela lock de linha.
 
-Ordem global de lock: `Order` → `Approval` → `Payment`.
+Ordem global de lock: `Order → Approval → Payment → Card → Fulfillment`.
+Deste arquivo participam os três primeiros elos.
 """
 
 from __future__ import annotations

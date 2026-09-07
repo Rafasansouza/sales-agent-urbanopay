@@ -337,6 +337,96 @@ silenciada.
 
 ---
 
+## ✅ A-16 — Entidades de SPEC-005 §4 sem consumidor no escopo `RECHARGE`
+
+**Resolvido em 2026-09-07**, na aprovação do plano da SPEC-005, e registrado em
+SPEC-005 §4.1.
+
+A §4 declara sete entidades conceituais. Quatro não têm consumidor real no
+recorte `RECHARGE`, e criar tabela sem consumidor produz schema que ninguém
+lê e que passa a exigir manutenção:
+
+| Entidade | Decisão |
+|---|---|
+| `RechargeTransaction` | **representada pelo `CardLedgerEntry` de tipo `RECHARGE_CREDIT`** — em `RECHARGE` são 1:1, e `balance_before`, `balance_after` e a chave de idempotência são campos naturais da entrada de ledger |
+| `FulfillmentAttempt` | adiada — não existe laço de retentativa: o efeito é uma transação local que acontece por inteiro ou não acontece |
+| `ReconciliationRecord` | adiada — a reconciliação deste escopo é detecção sobre evidência persistida, expressa como consulta |
+| `Ticket` | não materializada — bloqueada por A-05 |
+
+**Escopo da decisão:** vale **somente** para `RECHARGE`. Deve ser revista
+quando `TICKET_PURCHASE` ou qualquer efeito externo for implementado —
+etapa externa reintroduz tentativa e resultado desconhecido, que são
+justamente o que `FulfillmentAttempt` e `ReconciliationRecord` modelam.
+
+---
+
+## ✅ A-17 — SPEC-005 sem lista de erros tipados
+
+**Resolvido em 2026-09-07**, na aprovação do plano da SPEC-005, e registrado em
+SPEC-005 §11.3.
+
+Diferente da SPEC-003 §16, a SPEC-005 não trazia seção de erros. Seis códigos
+foram aprovados — `ORDER_NOT_PAID`, `FULFILLMENT_NOT_FOUND`,
+`EFFECT_CONFLICT`, `RECONCILIATION_REQUIRED`, `RECEIPT_NOT_AVAILABLE` e
+`UNSUPPORTED_FULFILLMENT_TYPE` —, e `CARD_NOT_ACTIVE` é reutilizado da
+SPEC-002 em vez de ganhar um nome novo.
+
+`CARD_NOT_ACCESSIBLE` **não** é fluxo normal do fulfillment: o `card_id` é
+derivado do Order, nunca recebido do usuário, então não há enumeração a
+proteger neste comando.
+
+---
+
+## 🟠 A-18 — Resolução administrativa de "pago e não entregável"
+
+**Bloqueia:** o encerramento operacional do caminho `RECONCILIATION_REQUIRED`
+**Fontes:** SPEC-005 §11.1, §11.2, §12.1; SPEC-003 §14, §15; PRD §19
+
+Existem dois caminhos em que o pagamento foi aprovado e a entrega é
+impossível sem decisão humana:
+
+1. **cartão do Order não está `ACTIVE`** quando o fulfillment executa;
+2. **`Order PAID` sem `Payment APPROVED`** — inconsistência de dados.
+
+Em ambos, o comportamento determinístico está definido e implementado: zero
+crédito, zero ledger, zero comprovante, `Fulfillment RECONCILIATION_REQUIRED`
+e `Order FULFILLMENT_FAILED`, sem retentativa automática, sem troca de cartão,
+sem estorno e sem nova cobrança.
+
+**O que permanece aberto** é a resolução: quem decide, com qual autoridade, e
+com qual efeito. Estorno está fora do escopo do MVP (SPEC-003 §14: `PAID` é
+terminal), então hoje o caso termina em estado conhecido e auditável — mas sem
+desfecho para o cliente.
+
+⚠️ **Mecanismo técnico ≠ política administrativa.** Existe reprocessamento:
+`fulfill_order` aceita reentrada a partir de `RECONCILIATION_REQUIRED`
+(SPEC-005 §5.1), e um cartão reativado conclui a entrega sem nova cobrança —
+comportamento coberto por teste unit e de integração. Isso **não** fecha A-18.
+O que falta não é capacidade de executar, e sim a decisão de **quem** está
+autorizado a corrigir o dado, **sob qual critério** e **com qual registro**.
+Enquanto isso não existir:
+
+- o reprocessamento só acontece por comando explícito de backend;
+- **passagem de tempo não autoriza** — não há scheduler, não há retentativa
+  automática e nenhuma decisão do fluxo observa relógio;
+- **fala do usuário não autoriza** — não existe parâmetro de texto em nenhuma
+  operação do módulo, o que é verificado por teste de assinatura;
+- **cartão voltar a `ACTIVE` não dispara nada por si só** — nada observa
+  mudança de estado de cartão.
+
+**Relação com A-07:** é a mesma família de lacuna — falta a superfície
+administrativa. A diferença é a consequência: em A-07 nenhum dinheiro foi
+movido; aqui, sim.
+
+**Impacto se não resolvido:** nenhuma incorreção técnica e nenhum efeito
+financeiro indevido. O risco é operacional: um cliente pago sem entrega e sem
+caminho de atendimento.
+
+**Quem decide:** produto, possivelmente junto com a SPEC da superfície
+administrativa que A-07 já exige.
+
+---
+
 ## Pendências declaradas pelo próprio PRD §19
 
 Reproduzidas aqui apenas para consolidar a visão. A fonte permanece o PRD.

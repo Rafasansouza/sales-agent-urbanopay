@@ -3,7 +3,7 @@
 **Fronteira de dominio:** ADR-001
 **Documentos obrigatorios:** SPEC-005
 **ADRs aplicaveis:** ADR-005
-**Estado:** nao implementado
+**Estado:** nao implementado — BLOQUEADO por A-05
 
 ## Responsabilidade
 
@@ -52,3 +52,15 @@ Direcao de dependencia: `domain` nao importa `application` nem
    tarefa.
 3. Confirme que os ADRs necessarios estao com status Aceito.
 4. Use a skill `prepare-task` antes de escrever codigo.
+
+## Bloqueio
+
+BLOQUEADO por **A-05**. `Ticket` exige `product_id` (catalogo sem SPEC) e
+`valid_from`/`valid_until`, que o PRD 19 mantem pendentes. Nenhuma tabela
+`tickets` foi criada: a SPEC-005 restringe o MVP a `RECHARGE` (1.1, 4.1), e
+`TICKET_ISSUANCE` e recusado com `UNSUPPORTED_FULFILLMENT_TYPE`, nunca tratado
+com comportamento ficticio.
+
+Quando o catalogo for especificado, revisitar tambem a modelagem de "um
+Fulfillment por Order": bilhete admite N por Order, conforme `quantity` do
+OrderItem (SPEC-005 9).

@@ -3,7 +3,7 @@
 **Fronteira de dominio:** ADR-001
 **Documentos obrigatorios:** SPEC-005
 **ADRs aplicaveis:** ADR-005
-**Estado:** nao implementado
+**Estado:** sem modulo proprio — por decisao
 
 ## Responsabilidade
 
@@ -52,3 +52,18 @@ Direcao de dependencia: `domain` nao importa `application` nem
    tarefa.
 3. Confirme que os ADRs necessarios estao com status Aceito.
 4. Use a skill `prepare-task` antes de escrever codigo.
+
+## Por que nao existe modulo proprio
+
+As consultas de pos-venda da SPEC-005 14 ja tem casa:
+
+- saldo -> `cards` (`get_card_balance`, SPEC-002);
+- pedido -> `orders`;
+- status de pagamento -> `payments`;
+- status de fulfillment e comprovante -> `fulfillment`.
+
+Um modulo `postsale` seria fachada sem logica propria. A composicao natural
+dessas leituras e a camada de tools da SPEC-004, que ainda nao existe.
+
+Nenhuma tabela e nenhum codigo foram criados aqui, por decisao: modulo sem
+responsabilidade propria e acoplamento sem ganho.
