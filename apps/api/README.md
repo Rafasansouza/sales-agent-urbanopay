@@ -28,7 +28,7 @@ src/urbanopay/
 ├── main.py              fábrica da aplicação, sem regra de negócio
 ├── core/                configuração, erros, logging, telemetria
 ├── api/v1/              camada HTTP versionada, routers finos
-├── db/                  vazio — aguarda ADR-012
+├── db/                  persistência decidida (ADR-012); implementação futura
 ├── providers/           portas de LLM e de pagamento
 │   ├── llm/             ADR-010
 │   └── payments/        ADR-007

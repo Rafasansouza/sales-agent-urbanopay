@@ -84,9 +84,9 @@ jobs:
   # ---------------------------------------------------------------------------
   # Testes de integração: fronteira de banco e de provider
   # ---------------------------------------------------------------------------
-  # Nesta fase do bootstrap a coleta é vazia: ADR-012 (persistência) está com
-  # status Proposta e as SPECs não foram implementadas. O job existe para que a
-  # infraestrutura de CI esteja pronta e validada desde já.
+  # Nesta fase a coleta é vazia: a persistência decidida em ADR-012 (Aceito)
+  # ainda não foi implementada e as SPECs não foram implementadas. O job existe
+  # para que a infraestrutura de CI esteja pronta e validada desde já.
   test-integration:
     name: Testes de integração
     runs-on: ubuntu-latest
@@ -140,10 +140,10 @@ jobs:
         run: uv sync --frozen
 
       - name: Executar testes de integração
-        # A camada ainda não possui testes: ADR-012 (persistência) está com
-        # status Proposta. O pytest retorna 5 quando nada é coletado; toleramos
-        # SOMENTE esse código, e de forma ruidosa. Qualquer outro código
-        # reprova o job.
+        # A camada ainda não possui testes: a persistência decidida em ADR-012
+        # (Aceito) ainda não foi implementada. O pytest retorna 5 quando nada é
+        # coletado; toleramos SOMENTE esse código, e de forma ruidosa. Qualquer
+        # outro código reprova o job.
         #
         # ATENÇÃO: remover esta tolerância quando a camada tiver testes.
         # Ver H-07 em docs/OPEN-QUESTIONS.md.
@@ -153,7 +153,7 @@ jobs:
           code=$?
           set -e
           if [ "$code" -eq 5 ]; then
-            echo "::warning::Nenhum teste de integracao coletado. Esperado nesta fase (ADR-012 Proposta)."
+            echo "::warning::Nenhum teste de integracao coletado. Esperado: persistencia (ADR-012) ainda nao implementada."
             exit 0
           fi
           exit "$code"

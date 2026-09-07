@@ -53,7 +53,9 @@ Consulte docs/OPEN-QUESTIONS.md. Bloqueios conhecidos hoje:
 - A-06 — calculate_usage_cost sem especificação
 - A-07 — interface de aprovação humana sem especificação
 - A-08 — stack do frontend sem ADR (ADR-011 Proposta)
-- ADR-012 (persistência) com status Proposta
+- A-13 — ciclo de vida do IdempotencyRecord em IN_PROGRESS obsoleto
+- H-11 — persistência do LangGraph exige ADR próprio antes da SPEC-004
+- persistência decidida (ADR-012 Aceito), porém ainda não implementada
 -->
 
 ## Fora de escopo

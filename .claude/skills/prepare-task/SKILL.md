@@ -68,7 +68,7 @@ A tarefa está bloqueada se:
 
 - exige regra de negócio que nenhum documento aceito define;
 - depende de um item de `OPEN-QUESTIONS.md` não resolvido;
-- exige ADR ainda com status `Proposta` — hoje ADR-011 e ADR-012;
+- exige ADR ainda com status `Proposta` — hoje ADR-011;
 - exige nova infraestrutura, provider ou dependência estrutural sem ADR;
 - exige mudança de state machine ou de fronteira de domínio sem ADR.
 

@@ -30,6 +30,7 @@ def health(settings: Annotated[Settings, Depends(get_settings)]) -> HealthRespon
     """Indica que o processo da API está no ar.
 
     Deliberadamente não verifica PostgreSQL nem Redis: essas verificações
-    dependem da camada de persistência, que aguarda a aceitação do ADR-012.
+    dependem da camada de persistência (ADR-012, aceito), que ainda não foi
+    implementada.
     """
     return HealthResponse(status="ok", service=settings.app_name, version=__version__)

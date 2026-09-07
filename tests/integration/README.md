@@ -32,7 +32,8 @@ O que pertence a esta camada:
 
 Vazio. Depende de:
 
-- **ADR-012** (`Proposta`) — sem camada de persistência não há o que integrar;
+- a camada de persistência decidida em **ADR-012** (Aceito) ainda não foi
+  implementada — sem ela não há o que integrar;
 - **SPEC-001 a SPEC-005** — não implementadas.
 
 `make test-integration` coletando zero testes é o resultado esperado nesta

@@ -27,8 +27,9 @@ dependencies = [
 
 # Dependências deliberadamente ausentes nesta fase:
 #
-#   - driver PostgreSQL, ORM e ferramenta de migration: ADR-012 está com
-#     status Proposta;
+#   - SQLAlchemy 2.x, psycopg 3 e Alembic: decididos em ADR-012 (Aceito), mas
+#     a persistência ainda não foi implementada — serão adicionados na tarefa
+#     de implementação, junto com o uv.lock correspondente;
 #   - langgraph e SDK de LLM: SPEC-004 não foi implementada e a
 #     compatibilidade com Python 3.13 ainda não foi validada (ver H-05 em
 #     docs/OPEN-QUESTIONS.md);

@@ -83,7 +83,7 @@ function Show-Help {
         @{ Name = 'test-e2e';         Text = 'Jornadas completas de compra (requer up)' }
         @{ Name = 'evals';            Text = 'Comportamento probabilistico do agente' }
         @{ Name = 'verify';           Text = 'fmt-check + lint + typecheck + test-unit' }
-        @{ Name = 'migrate';          Text = 'Indisponivel ate ADR-012 ser aceito' }
+        @{ Name = 'migrate';          Text = 'Indisponivel: persistencia ainda nao implementada' }
         @{ Name = 'clean';            Text = 'Remove caches de build e de ferramentas' }
     )
     foreach ($row in $rows) {
@@ -143,8 +143,9 @@ switch ($Target) {
     }
 
     'migrate' {
-        Write-Host 'ERRO: nenhuma ferramenta de migration foi definida ainda.' -ForegroundColor Red
-        Write-Host 'ADR-012 (persistencia/ORM/migrations) esta com status Proposta.'
+        Write-Host 'ERRO: Alembic ainda nao foi instalado.' -ForegroundColor Red
+        Write-Host 'ADR-012 esta Aceito (SQLAlchemy 2.x + psycopg 3 + Alembic), mas a'
+        Write-Host 'infraestrutura de persistencia ainda nao foi implementada nesta fase.'
         Write-Host 'Ver docs/adr/ADR-012-persistence-orm-migrations.md'
         exit 1
     }

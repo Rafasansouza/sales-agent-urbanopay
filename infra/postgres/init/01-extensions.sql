@@ -6,8 +6,8 @@
 -- Fonte: ADR-004.
 --
 -- Este script cria somente extensões. Nenhuma tabela, nenhum schema de domínio
--- e nenhum seed: o esquema pertence a migrations versionadas, e a ferramenta de
--- migrations aguarda a aceitação do ADR-012.
+-- e nenhum seed: o esquema pertence a migrations versionadas com Alembic
+-- (ADR-012, aceito), que ainda não foram materializadas.
 -- =============================================================================
 
 -- pgvector: restrito a recuperação semântica de FAQ, descrições e conteúdo

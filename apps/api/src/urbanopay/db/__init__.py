@@ -1,15 +1,20 @@
 """Camada de persistência.
 
-Fonte: ADR-004 (PostgreSQL autoritativo), ADR-012 (**Proposta**).
+Fonte: ADR-004 (PostgreSQL autoritativo), ADR-012 (Aceito).
 
-Estado: vazio por decisão. O ADR-012 — que define driver, camada de acesso a
-dados e ferramenta de migrations — está com status `Proposta`.
+Arquitetura decidida: SQLAlchemy 2.x com ORM declarativo tipado, psycopg 3,
+runtime assíncrono (`AsyncSession`), Repository Pattern, Unit of Work e Alembic
+para migrations.
 
-Enquanto não for aceito:
+Estado: **decidido, ainda não implementado**. A implementação nasce em tarefa
+posterior, junto com a primeira SPEC que precisar dela.
 
-- nenhuma dependência de banco existe no projeto;
-- nenhum modelo, schema ou migration deve ser criado;
-- `make migrate` falha deliberadamente.
+Enquanto isso:
+
+- as dependências previstas (SQLAlchemy, psycopg 3, Alembic) não foram
+  instaladas;
+- nenhum modelo, schema ou migration existe;
+- `make migrate` falha deliberadamente, porque não há Alembic instalado.
 
 Ver o README deste diretório e `docs/adr/ADR-012-persistence-orm-migrations.md`.
 """
