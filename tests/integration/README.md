@@ -30,11 +30,19 @@ O que pertence a esta camada:
 
 ## Estado atual
 
-Vazio. Depende de:
+Contém os testes da **persistence foundation** (ADR-012):
 
-- a camada de persistência decidida em **ADR-012** (Aceito) ainda não foi
-  implementada — sem ela não há o que integrar;
-- **SPEC-001 a SPEC-005** — não implementadas.
+- `test_persistence_foundation.py` — conexão assíncrona com PostgreSQL 17,
+  `Decimal` para `NUMERIC`, sessão, commit, rollback, Unit of Work,
+  `expire_on_commit=False` e naming convention aplicada no banco;
+- `test_migrations.py` — `alembic upgrade head` e `alembic check`.
 
-`make test-integration` coletando zero testes é o resultado esperado nesta
-fase.
+A tolerância a coleta vazia foi removida desta camada (H-07): **zero testes
+coletados reprova**.
+
+Os testes usam um schema descartável (`it_foundation`) com uma sonda genérica
+que não representa entidade de domínio e é invisível ao `alembic check`
+(`include_schemas=False` no env.py). Os testes das SPECs chegam com as SPECs.
+
+Requisitos locais: `up` executado e variáveis `POSTGRES_*` no ambiente ou no
+`.env`.

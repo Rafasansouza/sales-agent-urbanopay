@@ -1,66 +1,89 @@
 # Persistência
 
 **Documentos:** ADR-004 (Aceito), ADR-012 (Aceito)
-**Estado:** arquitetura decidida — implementação futura
+**Estado:** foundation implementada — modelos funcionais ainda não existem
 
-## Decisão vigente
+## O que existe nesta camada
 
-O ADR-012 foi **aceito** e define:
+| Arquivo | Papel |
+|---|---|
+| `base.py` | `Base` declarativa única e `NAMING_CONVENTION` determinística |
+| `engine.py` | `build_database_url` (a partir de `POSTGRES_*`) e fábrica do `AsyncEngine` |
+| `session.py` | `create_session_factory` — `async_sessionmaker` com `expire_on_commit=False` |
+| `unit_of_work.py` | `SqlAlchemyUnitOfWork`, implementação do port `core.persistence.UnitOfWork` |
+| `registry.py` | Agregação dos models para o Alembic (hoje: nenhum model) |
+| `migrations/` | Ambiente do Alembic — `env.py`, template e `versions/` (vazio) |
 
-- **SQLAlchemy 2.x**, com ORM declarativo tipado como modelo de persistência e
-  queries explícitas na API 2.0 (`select`, `insert`, `update`);
-- **psycopg 3** como driver;
-- **runtime assíncrono**: `AsyncSession`, `async_sessionmaker`,
-  `expire_on_commit=False`;
-- **Repository Pattern** com ports (`Protocol`) no domínio;
-- **Unit of Work** explícito e fino como port da camada de aplicação;
-- **Alembic** para migrations — nenhuma tabela é criada fora dele;
-- `READ COMMITTED`, `SELECT ... FOR UPDATE`, constraints e índices únicos como
-  mecanismos principais de concorrência;
-- um único schema lógico no MVP.
+Stack validada empiricamente em Python 3.13: SQLAlchemy 2.0.x (asyncio),
+psycopg 3.3.x, Alembic 1.19.x, greenlet 3.5.x.
 
-## Por que este diretório ainda está sem código
+## Como usar
 
-A decisão arquitetural existe; a **implementação ainda não**. Ela nasce em
-tarefa posterior, junto com a primeira SPEC que precisar de persistência, e
-seguirá a estrutura documentada no ADR-012 (`base.py`, `engine.py`,
-`session.py`, `unit_of_work.py`, `registry.py`, `migrations/`).
+```python
+from urbanopay.core.config import get_settings
+from urbanopay.db.engine import create_engine_from_settings
+from urbanopay.db.session import create_session_factory
+from urbanopay.db.unit_of_work import SqlAlchemyUnitOfWork
 
-Consequências atuais:
+engine = create_engine_from_settings(get_settings())
+session_factory = create_session_factory(engine)
 
-- Nenhuma dependência de banco no `pyproject.toml` — SQLAlchemy, psycopg 3 e
-  Alembic serão adicionados na tarefa de implementação.
-- Nenhum modelo, schema ou migration.
-- `make migrate` / `.\scripts\dev.ps1 migrate` falham com mensagem explicativa,
-  porque o Alembic não está instalado.
-- O job `test-integration` da CI sobe PostgreSQL e Redis, mas não coleta testes.
-- `GET /api/v1/health` não verifica banco nem Redis.
+uow = SqlAlchemyUnitOfWork(session_factory)
+async with uow:
+    ...  # repositories futuros participam via uow
+    await uow.commit()  # sempre explícito; sair sem commit = rollback
 
-## Regras que valem para a implementação
+await engine.dispose()  # shutdown explícito
+```
 
-Fonte: ADR-012, ADR-004, CLAUDE.md, SPEC-001 §7, SPEC-005 §7. Detalhes em
-`.claude/rules/database.md`.
+A camada de aplicação depende do port `urbanopay.core.persistence.UnitOfWork`,
+nunca desta implementação diretamente.
 
-- Modelos ORM vivem **apenas** em `modules/<dominio>/infrastructure/` e nunca
-  atravessam a fronteira do repositório.
-- Entidades de domínio são puras: `domain/` não importa SQLAlchemy.
-- Repositories nunca executam commit; a camada de aplicação controla a
-  fronteira transacional via `UnitOfWork`.
-- Dinheiro em `NUMERIC(12, 2)` ↔ `Decimal`, sem float em nenhum ponto e sem
-  arredondamento na persistência.
-- Constraints de banco para invariantes críticas, entre elas:
-  - no máximo um `Payment APPROVED` por `Order` (índice único parcial);
-  - um efeito financeiro por Order de recarga (`UNIQUE (order_id)`);
-  - unicidade de CPF normalizado e de chave de idempotência.
-- Ledger, saldo e status atualizados na mesma transação, com
-  `SELECT ... FOR UPDATE`.
-- Migration destrutiva exige revisão humana explícita; `alembic check` na CI.
-- Em Windows, psycopg async exige política de event loop compatível
-  (`SelectorEventLoop` ou equivalente) — critério de teste da implementação.
-- Seeds exclusivamente fictícios.
+## Regras em vigor (ADR-012)
 
-## Fora do escopo do ADR-012
+- Modelos ORM vivem **apenas** em `modules/<dominio>/infrastructure/models.py`,
+  herdam de `Base` e são registrados em `registry.py`. Nunca atravessam a
+  fronteira do repositório.
+- Entidades de domínio são puras — verificado por teste de arquitetura
+  (`tests/unit/test_architecture_boundaries.py`).
+- Repositories nunca executam commit; a fronteira transacional é da aplicação,
+  via Unit of Work.
+- Dinheiro: `Numeric(12, 2, asdecimal=True)` ↔ `Decimal`. A persistência não
+  arredonda; `ROUND_HALF_UP` pertence ao domínio.
+- Toda constraint tem nome determinístico. `CheckConstraint` exige `name=`
+  explícito — a convenção falha de propósito sem ele.
+- Nenhuma tabela é criada fora do Alembic.
 
-As tabelas internas do LangGraph (checkpointer de ADR-002) exigem **ADR
-próprio** antes da SPEC-004 — ver H-11 em `docs/OPEN-QUESTIONS.md`. Até lá,
-nenhum `setup()` automático de schema do LangGraph pode ser introduzido.
+## Migrations
+
+```powershell
+.\scripts\dev.ps1 migrate                       # upgrade head
+.\scripts\dev.ps1 migration "descricao"         # gera CANDIDATA (autogenerate)
+.\scripts\dev.ps1 downgrade                     # reverte uma
+.\scripts\dev.ps1 migration-check               # alembic check
+```
+
+Regra permanente: `autogenerate → candidata → revisão humana obrigatória`.
+Índices parciais, `CHECK`s e invariantes específicas do PostgreSQL exigem
+revisão explícita. Migration destrutiva exige revisão humana sinalizada no PR.
+
+`versions/` está vazio por decisão: nenhuma revision artificial. A primeira
+migration real nasce com a primeira SPEC implementada.
+
+## Windows
+
+psycopg async não funciona sobre o `ProactorEventLoop` padrão do Windows. O
+único ponto do projeto que trata isso é `urbanopay/core/event_loop.py`; os
+testes async recebem um `SelectorEventLoop` pelo hook
+`pytest_asyncio_loop_factories` em `tests/conftest.py` (registrado apenas em
+Windows). Solução específica do Python 3.13 — rever antes de migrar para 3.14+.
+
+## O que ainda não existe, por decisão
+
+- Modelos funcionais, repositories e migrations de negócio — nascem com as
+  SPECs.
+- A dependência FastAPI "uma sessão por request" — entra com o primeiro
+  endpoint que consumir o banco. A API **não** cria engine no startup.
+- Checkpointer do LangGraph — fora do escopo do ADR-012; exige ADR próprio
+  antes da SPEC-004 (H-11). Nenhum `setup()` de schema do LangGraph.
+- `pgvector` (pacote Python) — adiado até existir consumidor real.

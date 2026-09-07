@@ -50,8 +50,13 @@ e cria somente extensões:
   invariantes financeiras.
 
 Nenhuma tabela e nenhum seed. O esquema pertence a migrations versionadas com
-Alembic (ADR-012, aceito), que ainda não foram materializadas — a implementação
-da persistência é tarefa futura.
+Alembic (ADR-012). O ambiente do Alembic está implementado em
+`apps/api/src/urbanopay/db/migrations/`; a primeira revision nasce com a
+primeira SPEC.
+
+Nota: o PostgreSQL da **CI** não executa este script de init — a migration da
+primeira SPEC que precisar de extensão deve criá-la com
+`CREATE EXTENSION IF NOT EXISTS`.
 
 ## Papel de cada serviço
 

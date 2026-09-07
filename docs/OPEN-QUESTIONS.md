@@ -1,9 +1,9 @@
 # Questões Abertas
 
 **Projeto:** UrbanoPay Mobilidade
-**Última atualização:** 2026-08-29
+**Última atualização:** 2026-09-06
 **Origem:** análise documental realizada no bootstrap do repositório, atualizada
-pela aceitação do ADR-012.
+pela aceitação do ADR-012 e pela implementação da persistence foundation.
 
 ## Propósito
 
@@ -314,14 +314,13 @@ demonstração.
 ADR-013 fixou Python 3.13. As dependências instaladas no bootstrap
 (FastAPI, Uvicorn, Pydantic, Ruff, mypy, pytest) são compatíveis.
 
-**Resolvido documentalmente em 2026-08-29, pela aceitação do ADR-012:**
+**Resolvido documentalmente em 2026-08-29** pela aceitação do ADR-012 e
+**validado empiricamente em 2026-09-06** pela persistence foundation:
 
-- SQLAlchemy 2.0 possui suporte a Python 3.13;
-- greenlet possui suporte a Python 3.13;
-- psycopg 3 suporta Python 3.13 e PostgreSQL 17.
-
-Isso deixou de bloquear a aceitação do ADR-012. A implementação da persistência
-ainda deverá validar resolução via `uv`, conexão real e testes de integração.
+- SQLAlchemy 2.0.52 (asyncio), psycopg 3.3.5, Alembic 1.19.2 e greenlet 3.5.5
+  resolvidos pelo `uv` em Python 3.13.7 e registrados no `uv.lock`;
+- conexão assíncrona real contra PostgreSQL 17 coberta por teste de
+  integração, incluindo retorno de `Decimal` para `NUMERIC`.
 
 **Permanece não validado:** `langgraph` e SDK do Mercado Pago. A validação é
 pré-requisito das SPEC-003 e SPEC-004. Incompatibilidade exige novo ADR, não
@@ -377,28 +376,31 @@ A decisão pertence à definição de Orders e Payments e deve ser resolvida
 
 ### 🟡 H-07 — Tolerância ao código de saída 5 do pytest
 
-As camadas `integration`, `e2e` e `evals` ainda não possuem testes, porque as
-SPEC-001 a SPEC-005 não foram implementadas. O pytest retorna **código 5**
-quando nenhum teste é coletado, o que reprovaria os alvos de teste e o job de
-CI correspondente.
+O pytest retorna **código 5** quando nenhum teste é coletado, o que reprovaria
+os alvos de teste e o job de CI de uma camada ainda vazia.
 
-Solução adotada: `Makefile`, `scripts/dev.ps1` e o job `test-integration` da CI
-toleram **exclusivamente** o código 5, emitindo aviso explícito. Qualquer outro
-código de saída continua reprovando.
+**Integration: ✅ resolvida em 2026-09-06.** A persistence foundation trouxe os
+primeiros testes reais de integração, e a tolerância foi removida do
+`Makefile`, do `scripts/dev.ps1` e do job da CI. Zero testes coletados na
+camada `integration` agora **reprova** — que é a proteção que este item pedia.
 
-**Risco:** se um dia a coleta por marcador quebrar, os testes daquela camada
-desaparecem silenciosamente e a tolerância mascara o problema.
+**Permanece para `e2e` e `evals`**, que seguem sem testes:
 
-**Ação obrigatória:** remover a tolerância de cada camada assim que ela tiver
-o primeiro teste. Especificamente:
+- `e2e` — remover ao implementar a primeira jornada completa;
+- `eval` — remover ao criar o dataset de SPEC-004 §16.
 
-- `integration` — ao implementar a primeira SPEC com persistência;
-- `e2e` — ao implementar a primeira jornada completa;
-- `eval` — ao criar o dataset de SPEC-004 §16.
+Pontos a alterar quando chegar a hora: a macro `run_optional_layer` no
+`Makefile` e o switch `-AllowNoTests` em `scripts/dev.ps1`.
 
-Pontos a alterar: a macro `run_optional_layer` no `Makefile`, o switch
-`-AllowNoTests` em `scripts/dev.ps1` e o passo correspondente em
-`.github/workflows/ci.yml`.
+**Risco enquanto durar:** se a coleta por marcador quebrar nessas duas
+camadas, os testes desaparecem silenciosamente e a tolerância mascara o
+problema.
+
+Nota registrada na resolução da integration: o PostgreSQL da CI (service
+container) **não executa** `infra/postgres/init/01-extensions.sql` — as
+extensões `vector`, `pgcrypto` e `btree_gist` não existem lá. Nada as usa
+hoje; a migration da primeira SPEC que precisar delas deve criá-las
+(`CREATE EXTENSION IF NOT EXISTS ...`).
 
 ### ✅ H-08 — Deprecação do `httpx` no TestClient do Starlette
 

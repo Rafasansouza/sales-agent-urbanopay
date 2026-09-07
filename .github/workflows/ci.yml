@@ -84,9 +84,10 @@ jobs:
   # ---------------------------------------------------------------------------
   # Testes de integração: fronteira de banco e de provider
   # ---------------------------------------------------------------------------
-  # Nesta fase a coleta é vazia: a persistência decidida em ADR-012 (Aceito)
-  # ainda não foi implementada e as SPECs não foram implementadas. O job existe
-  # para que a infraestrutura de CI esteja pronta e validada desde já.
+  # Valida a persistence foundation contra PostgreSQL real: migrations
+  # aplicadas, `alembic check` limpo e a suíte de integração. Zero testes
+  # coletados aqui é FALHA, não estado esperado (H-07 resolvido para esta
+  # camada).
   test-integration:
     name: Testes de integração
     runs-on: ubuntu-latest
@@ -117,9 +118,13 @@ jobs:
           --health-retries 10
 
     env:
-      # Credenciais efêmeras do runner, válidas apenas durante o job.
-      DATABASE_URL: postgresql://urbanopay:urbanopay_ci_only@localhost:5432/urbanopay_test
-      REDIS_URL: redis://localhost:6379/0
+      # Fonte canônica de configuração do banco (ADR-012): a aplicação deriva a
+      # URL destas variáveis. Credenciais fictícias, válidas apenas no runner.
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: urbanopay_test
+      POSTGRES_USER: urbanopay
+      POSTGRES_PASSWORD: urbanopay_ci_only
       APP_ENV: ci
       # Providers falsos: nenhuma chamada externa real em CI (ADR-007, ADR-010).
       LLM_PROVIDER: fake
@@ -133,30 +138,24 @@ jobs:
         with:
           enable-cache: true
 
-      - name: Instalar Python
-        run: uv python install
+      - name: Instalar Python 3.13
+        # Versão explícita: a foundation de persistência foi validada em 3.13
+        # (ADR-013, ADR-012) e este job não deve flutuar de versão.
+        run: uv python install 3.13
 
       - name: Sincronizar ambiente
         run: uv sync --frozen
 
+      - name: Aplicar migrations
+        run: uv run alembic upgrade head
+
+      - name: Verificar divergência modelo × migrations
+        run: uv run alembic check
+
       - name: Executar testes de integração
-        # A camada ainda não possui testes: a persistência decidida em ADR-012
-        # (Aceito) ainda não foi implementada. O pytest retorna 5 quando nada é
-        # coletado; toleramos SOMENTE esse código, e de forma ruidosa. Qualquer
-        # outro código reprova o job.
-        #
-        # ATENÇÃO: remover esta tolerância quando a camada tiver testes.
-        # Ver H-07 em docs/OPEN-QUESTIONS.md.
-        run: |
-          set +e
-          uv run pytest -m integration
-          code=$?
-          set -e
-          if [ "$code" -eq 5 ]; then
-            echo "::warning::Nenhum teste de integracao coletado. Esperado: persistencia (ADR-012) ainda nao implementada."
-            exit 0
-          fi
-          exit "$code"
+        # Sem tolerância a coleta vazia: a camada possui testes reais desde a
+        # persistence foundation. Zero testes coletados (exit 5) reprova.
+        run: uv run pytest -m integration
 
   # ---------------------------------------------------------------------------
   # Segurança: secrets e dependências

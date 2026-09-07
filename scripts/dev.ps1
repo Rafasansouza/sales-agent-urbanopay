@@ -18,7 +18,11 @@
 [CmdletBinding()]
 param(
     [Parameter(Position = 0)]
-    [string]$Target = 'help'
+    [string]$Target = 'help',
+
+    # Argumento adicional de alguns alvos (ex.: mensagem de `migration`).
+    [Parameter(Position = 1)]
+    [string]$Arg = ''
 )
 
 Set-StrictMode -Version Latest
@@ -83,7 +87,10 @@ function Show-Help {
         @{ Name = 'test-e2e';         Text = 'Jornadas completas de compra (requer up)' }
         @{ Name = 'evals';            Text = 'Comportamento probabilistico do agente' }
         @{ Name = 'verify';           Text = 'fmt-check + lint + typecheck + test-unit' }
-        @{ Name = 'migrate';          Text = 'Indisponivel: persistencia ainda nao implementada' }
+        @{ Name = 'migrate';          Text = 'Aplica migrations ate head (requer up)' }
+        @{ Name = 'migration';        Text = 'Gera migration candidata: migration "descricao"' }
+        @{ Name = 'downgrade';        Text = 'Reverte a ultima migration aplicada' }
+        @{ Name = 'migration-check';  Text = 'Falha se modelos divergirem das migrations' }
         @{ Name = 'clean';            Text = 'Remove caches de build e de ferramentas' }
     )
     foreach ($row in $rows) {
@@ -123,7 +130,9 @@ switch ($Target) {
     { $_ -in 'test', 'test-unit' } { Invoke-Step 'pytest -m unit' 'uv' @('run', 'pytest', '-m', 'unit') }
 
     'test-integration' {
-        Invoke-Step 'pytest -m integration' 'uv' @('run', 'pytest', '-m', 'integration') -AllowNoTests
+        # Sem tolerancia a "nenhum teste coletado": a camada possui testes
+        # reais desde a persistence foundation (H-07).
+        Invoke-Step 'pytest -m integration' 'uv' @('run', 'pytest', '-m', 'integration')
     }
 
     'test-e2e' {
@@ -143,11 +152,26 @@ switch ($Target) {
     }
 
     'migrate' {
-        Write-Host 'ERRO: Alembic ainda nao foi instalado.' -ForegroundColor Red
-        Write-Host 'ADR-012 esta Aceito (SQLAlchemy 2.x + psycopg 3 + Alembic), mas a'
-        Write-Host 'infraestrutura de persistencia ainda nao foi implementada nesta fase.'
-        Write-Host 'Ver docs/adr/ADR-012-persistence-orm-migrations.md'
-        exit 1
+        Invoke-Step 'alembic upgrade head' 'uv' @('run', 'alembic', 'upgrade', 'head')
+    }
+
+    'migration' {
+        if (-not $Arg) {
+            Write-Host 'uso: .\scripts\dev.ps1 migration "descricao da mudanca"' -ForegroundColor Red
+            exit 1
+        }
+        Invoke-Step 'alembic revision --autogenerate' 'uv' @(
+            'run', 'alembic', 'revision', '--autogenerate', '-m', $Arg
+        )
+        Write-Host 'ATENCAO: autogenerate produz uma CANDIDATA. Revise antes de aceitar (ADR-012).' -ForegroundColor Yellow
+    }
+
+    'downgrade' {
+        Invoke-Step 'alembic downgrade -1' 'uv' @('run', 'alembic', 'downgrade', '-1')
+    }
+
+    'migration-check' {
+        Invoke-Step 'alembic check' 'uv' @('run', 'alembic', 'check')
     }
 
     'clean' {

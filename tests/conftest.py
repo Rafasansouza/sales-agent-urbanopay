@@ -13,13 +13,34 @@ Regras que valem para toda a suíte:
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+import sys
+from collections.abc import Iterator, Mapping
+from typing import TYPE_CHECKING
 
 import pytest
 from fastapi.testclient import TestClient
 
 from urbanopay.core.config import Settings, get_settings
+from urbanopay.core.event_loop import selector_loop_factory
 from urbanopay.main import create_app
+
+if TYPE_CHECKING:
+    import asyncio
+    from collections.abc import Callable
+
+# Em Windows, o ProactorEventLoop padrão é incompatível com psycopg async
+# (ADR-012). O hook do pytest-asyncio abaixo fornece um SelectorEventLoop para
+# todos os testes async. O hook só é REGISTRADO em Windows: em Linux/macOS ele
+# nem existe, preservando o comportamento padrão do plugin.
+#
+# Nota: solução específica do Python 3.13 — ver urbanopay/core/event_loop.py.
+if sys.platform == "win32":
+
+    def pytest_asyncio_loop_factories(
+        config: pytest.Config,
+        item: pytest.Item,
+    ) -> Mapping[str, Callable[[], asyncio.AbstractEventLoop]]:
+        return {"selector": selector_loop_factory}
 
 
 @pytest.fixture

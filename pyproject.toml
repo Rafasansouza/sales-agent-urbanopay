@@ -35,6 +35,7 @@ dev = [
     "httpx2>=2.12.0",
     "mypy>=1.14",
     "pytest>=8.3",
+    "pytest-asyncio>=1.4.0",
     "pytest-cov>=6.0",
     "ruff>=0.9",
 ]
@@ -117,6 +118,10 @@ no_implicit_optional = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "--strict-markers --strict-config"
+# pytest-asyncio em modo strict: teste async exige @pytest.mark.asyncio,
+# coerente com a regra de que todo teste declara seus marcadores.
+asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"
 markers = [
     "unit: regra de dominio pura, sem I/O externo",
     "integration: fronteira de banco ou de provider, exige infraestrutura local",

@@ -101,16 +101,29 @@ Fonte: ADR-012 (Aceito).
 
 ## Estado atual do repositório
 
-ADR-012 foi **aceito**, mas a persistência **ainda não foi implementada**. A
-implementação nasce em tarefa posterior, junto com a primeira SPEC que precisar
-dela.
+A **persistence foundation está implementada** em
+`apps/api/src/urbanopay/db/` (base, engine, session, Unit of Work, registry e
+ambiente Alembic), com SQLAlchemy 2.0.x, psycopg 3.3.x e Alembic 1.19.x
+validados em Python 3.13.
 
-Enquanto isso:
+O que **ainda não existe**, por decisão:
 
-- `apps/api/src/urbanopay/db/` contém apenas documentação;
-- as dependências previstas (SQLAlchemy, psycopg 3, Alembic, pytest-asyncio)
-  ainda não foram instaladas;
-- `pgvector` permanece adiado até existir consumidor real.
+- modelos funcionais, repositories e migrations de negócio — nascem com as
+  SPECs (`versions/` está vazio; nenhuma revision artificial);
+- a dependência FastAPI "uma sessão por request" — entra com o primeiro
+  endpoint que consumir o banco; a API não cria engine no startup;
+- `pgvector` (pacote Python) — adiado até existir consumidor real.
+
+Regras operacionais da foundation:
+
+- novos models herdam de `urbanopay.db.base.Base` e são registrados em
+  `urbanopay.db.registry`;
+- a fonte canônica de configuração é `POSTGRES_*`; a URL é derivada por
+  `build_database_url` — não existe `DATABASE_URL`;
+- em Windows, psycopg async exige `SelectorEventLoop`: o único ponto que trata
+  isso é `urbanopay/core/event_loop.py` (solução específica do Python 3.13);
+- o teste `tests/unit/test_architecture_boundaries.py` reprova import de
+  SQLAlchemy/psycopg/Alembic em `modules/*/domain/`.
 
 ADR-012 governa **apenas as tabelas da aplicação e do domínio UrbanoPay**. A
 persistência das tabelas internas do LangGraph exige ADR próprio antes da
