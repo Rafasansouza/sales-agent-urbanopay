@@ -465,9 +465,8 @@ Nenhuma delas bloqueia este ADR; todas estão registradas em
 
 - estratégia de persistência do checkpointer do LangGraph, que exige ADR próprio
   antes da SPEC-004;
-- ciclo de vida de `IdempotencyRecord` em estado `IN_PROGRESS` obsoleto, que
-  pertence à definição de Orders e Payments e precisa ser resolvido antes da
-  SPEC-003;
+- ~~ciclo de vida de `IdempotencyRecord` em estado `IN_PROGRESS` obsoleto~~ —
+  resolvido em 2026-09-07 pela SPEC-003 §11.1–§11.3 (A-13);
 - `CHECK (balance >= 0)`: seguro no MVP, que apenas credita, mas o
   comportamento de débito não está especificado;
 - TTL de Order, que afeta diretamente o schema;

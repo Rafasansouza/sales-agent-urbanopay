@@ -246,12 +246,12 @@ DRAFT
 ```
 
 Estados adicionais:
-- `REQUIRES_APPROVAL`;
-- `APPROVED` (aprovação administrativa, em enum separado do Payment);
-- `FAILED`;
+- `REQUIRES_APPROVAL` (confirmado pelo cliente, aguardando aprovação humana);
 - `CANCELLED`;
 - `EXPIRED`;
 - `FULFILLMENT_FAILED`.
+
+A aprovação administrativa é representada pelo estado da entidade `Approval`, em enum separado; o Order não possui estado `APPROVED`. A máquina de estados normativa está em SPEC-003 §14.
 
 ## 13. Segurança e guardrails
 
