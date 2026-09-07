@@ -4,8 +4,9 @@
 cria e decide aprovações dentro da sua própria transação, sem tocar tabela
 alheia e sem que `approvals` precise conhecer `orders`.
 
-Ordem global de lock: `Order` → `Approval` → `Payment`. `get_for_order_for_update`
-é sempre chamado **depois** do lock do Order.
+Ordem global de lock, única em toda a base:
+`Order → Approval → Payment → Card → Fulfillment` (ADR-012).
+`get_for_order_for_update` é sempre chamado **depois** do lock do Order.
 """
 
 from __future__ import annotations

@@ -6,9 +6,11 @@ Contratos comuns:
 - implementações **nunca** executam commit — a fronteira transacional é do
   Unit of Work, controlado pela aplicação;
 - nenhuma exceção de repository carrega PII ou valor monetário;
-- **ordem global de lock: `Order` → `Approval` → `Payment`.** Toda transação
-  que toque mais de um desses agregados adquire os locks nessa ordem, para
-  evitar deadlock (ADR-012).
+- **ordem global de lock, única em toda a base:
+  `Order → Approval → Payment → Card → Fulfillment`** (ADR-012). Toda
+  transação que toque mais de um desses agregados adquire os locks nessa
+  ordem, para evitar deadlock. Deste módulo participam os três primeiros
+  elos; `Card` e `Fulfillment` entram com a SPEC-005.
 
 Sobre acesso por titularidade: as consultas do cliente recebem `customer_id` e
 `order_id`/`quote_id` **na mesma query**, jamais em duas etapas. Buscar

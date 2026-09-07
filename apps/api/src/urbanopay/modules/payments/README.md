@@ -96,5 +96,8 @@ transiciona o Order na mesma transação); `orders` **nunca** importa `payments`
 
 ## Ordem global de lock
 
-`Order` → `Approval` → `Payment`. Vale inclusive no caminho do webhook, onde é
-tentador travar primeiro o Payment que o evento identificou.
+`Order → Approval → Payment → Card → Fulfillment` (ADR-012). Deste módulo
+participam os três primeiros elos, e a ordem vale inclusive no caminho do
+webhook, onde é tentador travar primeiro o Payment que o evento identificou.
+
+`Card` e `Fulfillment` entram com a SPEC-005 e vêm **depois** do Payment.

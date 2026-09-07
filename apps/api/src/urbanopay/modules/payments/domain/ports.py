@@ -1,7 +1,11 @@
 """Ports do domínio de pagamentos (ADR-007, ADR-012).
 
-Ordem global de lock: `Order` → `Approval` → `Payment`. O Payment é o
-**último** elo: toda transação que também trave o Order o faz antes.
+Ordem global de lock, única em toda a base:
+`Order → Approval → Payment → Card → Fulfillment` (ADR-012).
+
+Deste módulo participam os três primeiros elos: toda transação que também
+trave o Order o faz antes do Payment. `Card` e `Fulfillment` entram com a
+SPEC-005 e vêm depois — o Payment **não** é o último elo da cadeia.
 """
 
 from __future__ import annotations
@@ -34,9 +38,9 @@ class PaymentRepository(Protocol):
     async def get_for_update(self, payment_id: UUID) -> Payment | None:
         """Payment com lock de linha (`SELECT ... FOR UPDATE`).
 
-        Último elo da ordem global de lock. É sob este lock que webhook e
-        consulta ativa convergem, o que serializa aplicações concorrentes do
-        mesmo fato.
+        Terceiro elo da ordem global de lock, sempre depois do Order. É sob
+        este lock que webhook e consulta ativa convergem, o que serializa
+        aplicações concorrentes do mesmo fato.
         """
         ...
 

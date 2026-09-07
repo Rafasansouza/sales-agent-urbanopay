@@ -1,122 +1,157 @@
 ---
-description: Regras de fulfillment, ledger, tickets, reconciliação e pós-venda (SPEC-005).
 paths:
-  - "apps/api/src/urbanopay/modules/fulfillment/**"
-  - "apps/api/src/urbanopay/modules/tickets/**"
-  - "apps/api/src/urbanopay/modules/postsale/**"
-  - "tests/**/fulfillment/**"
-  - "tests/**/tickets/**"
-  - "tests/**/postsale/**"
-  - "tests/**/*ledger*"
-  - "tests/**/*recharge*"
+  - apps/api/src/urbanopay/modules/fulfillment/**
+  - apps/api/src/urbanopay/modules/tickets/**
+  - apps/api/src/urbanopay/modules/postsale/**
 ---
 
-# Regra — Fulfillment & Post-Sale
+# Regra — Fulfillment & Post-sale
 
-**Documentos obrigatórios:** `docs/specs/SPEC-005-fulfillment-post-sale.md`,
-ADR-005, ADR-007.
+**Documentos obrigatórios:** `docs/specs/SPEC-005-fulfillment-post-sale.md`, ADR-005, ADR-012.
 
 Leia a SPEC-005 antes de qualquer alteração nestes módulos.
 
 ## Princípio
 
-`PAYMENT APPROVED` e `FULFILLMENT COMPLETED` são eventos **distintos**. Falha
-de fulfillment nunca cria nova cobrança automaticamente.
+Fulfillment é **consequência** de estado financeiro confirmado.
 
-## Invariantes
+> Pagamento aprovado autoriza fulfillment; fala do usuário nunca autoriza.
 
-Fonte: SPEC-005 §19. Nenhuma delas é negociável:
+`PAYMENT APPROVED` e `FULFILLMENT COMPLETED` são eventos distintos (§2). Falha
+de fulfillment **nunca** cria nova cobrança.
 
-1. nenhum fulfillment sem `Order PAID`;
-2. nenhuma recarga sem `Payment APPROVED`;
-3. um Order de recarga produz **no máximo um** efeito financeiro;
-4. o saldo corresponde ao ledger;
-5. ticket nunca excede a quantidade comprada;
-6. falha não gera nova cobrança;
-7. comprovante de sucesso somente após `COMPLETED`;
-8. o LLM nunca altera saldo.
+## Escopo do MVP
 
-## Atomicidade
+Somente `fulfillment_type = RECHARGE`. `TICKET_ISSUANCE` está bloqueado por
+A-05 e é recusado com `UNSUPPORTED_FULFILLMENT_TYPE` — nunca com comportamento
+fictício. Não existe tabela `tickets`, não existe scheduler, não existe outbox,
+não existe estorno.
 
-A atualização de ledger, saldo e status ocorre na **mesma transação de banco**.
+## Autoridade de entrada
 
-Concorrência usa lock ou controle equivalente. Lock em Redis não substitui
-constraint de banco. Dinheiro em `Decimal`/`NUMERIC`.
+O comando é `fulfill_order(order_id)` e **não recebe** `card_id`, `amount`,
+`payment_id`, perfil tarifário nem qualquer estado informado pelo usuário.
+Tudo é derivado do estado persistido:
 
-Todo movimento de saldo gera `CardLedgerEntry`. No MVP o tipo é
-`RECHARGE_CREDIT`.
+- `card_id` ← `order.card_id` (cartão congelado no Order);
+- `amount` ← `order.total`, exatamente. A tarifa **não** é recalculada;
+- `payment_id` ← `Payment APPROVED` do Order.
+
+Um parâmetro de valor ou de cartão nesta assinatura permitiria à superfície de
+chamada escolher quanto se credita e para quem. Há teste de assinatura.
+
+## State machine (SPEC-005 §5.1)
+
+```text
+(inexistente) ──> PENDING
+PENDING       ──> PROCESSING
+PROCESSING   ─┬─> COMPLETED
+              ├─> FAILED
+              └─> RECONCILIATION_REQUIRED
+FAILED                  ──> PROCESSING   (comando EXPLÍCITO)
+RECONCILIATION_REQUIRED ──> PROCESSING   (comando EXPLÍCITO)
+COMPLETED                                (terminal)
+```
+
+Em `RECHARGE`, `PENDING → PROCESSING → COMPLETED` ocorre na **mesma
+transação** e não é observável de fora. Isso é deliberado: commit intermediário
+criaria janela de estado financeiro parcial. **Não** crie commits só para
+tornar estados visíveis.
+
+Reentrada nunca é automática.
+
+## Mapeamento Order × Fulfillment (§5.2)
+
+| Fulfillment | Order |
+|---|---|
+| `PENDING`, `PROCESSING` | `FULFILLING` |
+| `COMPLETED` | `COMPLETED` |
+| `FAILED` | `FULFILLMENT_FAILED` |
+| `RECONCILIATION_REQUIRED` | `FULFILLMENT_FAILED` |
+
+Fulfillment é a autoridade **detalhada**; o Order mantém o estado
+**coarse-grained** da jornada, que termina em `COMPLETED`. Nenhuma transição
+nova é introduzida no Order — todos os caminhos já existem em SPEC-003 §14.
+
+## Invariantes financeiras
+
+- nenhum fulfillment sem `Order PAID`;
+- nenhuma recarga sem `Payment APPROVED` — verificado, não presumido;
+- **um Order de recarga produz no máximo um efeito financeiro**;
+- saldo corresponde ao ledger;
+- `ledger.amount == order.total`;
+- comprovante somente após `COMPLETED`;
+- LLM nunca altera saldo.
 
 ## Idempotência
 
-Chave conceitual: `recharge:{order_id}`.
+Chave **natural**: o Order. **Não** use `idempotency_records` — manter um
+segundo mecanismo para o mesmo fato criaria duas verdades a sincronizar (A-15).
 
-Reprocessar o mesmo Order retorna o resultado existente e **nunca** duplica
-crédito. A emissão de ticket também é idempotente, respeitando a `quantity` do
-`OrderItem`.
+Garantia física: índice único parcial de `RECHARGE_CREDIT` por `order_id`.
 
-## Independência do agente
+- replay de Order concluído ⇒ devolve o resultado anterior, sem novo crédito e
+  sem novo comprovante;
+- efeito divergente para o mesmo Order ⇒ `EFFECT_CONFLICT`, sem efeito.
 
-O fulfillment é iniciado pelo backend após o pagamento e continua mesmo se o
-usuário fechar o navegador ou se o LLM ficar indisponível. Não acople o
-fulfillment ao ciclo de vida da conversa.
+## Transação e locks
 
-## Classificação de falhas
+Tudo em **uma** transação: ledger, saldo, fulfillment, Order e comprovante.
+Qualquer falha antes do commit desfaz tudo junto — nenhum estado financeiro
+parcial sobrevive.
 
-| Classe | Comportamento |
-|---|---|
-| `RETRYABLE` | retry automático, no máximo 3 tentativas (sugestão inicial da SPEC) |
-| `NON_RETRYABLE` | `FAILED`, sem retry |
-| `UNKNOWN_OUTCOME` | `RECONCILIATION_REQUIRED`, **nunca** retry cego |
+**Ordem global de lock:** `Order → Approval → Payment → Card → Fulfillment`.
 
-- Falha conhecida antes de qualquer efeito ⇒ `FAILED`.
-- Falha na transação local ⇒ rollback.
-- Resultado externo desconhecido ⇒ `RECONCILIATION_REQUIRED`.
+No fluxo de recarga: `lock Order` → `lock Card` → `lock Fulfillment`. O
+Payment é **leitura**, porque `APPROVED` é terminal e imutável.
+
+⚠️ O `Card` vem **antes** do `Fulfillment` por necessidade técnica.
+`fulfillments.card_id` e `card_ledger_entries.card_id` são chaves estrangeiras,
+e o PostgreSQL adquire `FOR KEY SHARE` na linha do cartão no `INSERT`. Travar
+o cartão **depois** desses inserts deixa duas transações concorrentes sobre o
+mesmo cartão com lock compartilhado, ambas tentando elevá-lo a exclusivo —
+deadlock. Isso não é teoria: a ordem inversa foi implementada e reprovada por
+`tests/integration/fulfillment/test_concurrency.py`, que é o teste de
+regressão desse defeito.
+
+Não adquira lock desnecessário.
+
+## Ledger
+
+`CardLedgerEntry` é **imutável**: o repository tem `add`, e não tem `update`
+nem `delete`. Invariantes com constraint: `amount > 0`, `currency = 'BRL'`,
+`balance_before >= 0`, `balance_after >= 0`,
+`balance_after = balance_before + amount`, e um `RECHARGE_CREDIT` por Order.
+
+## Saldo do cartão
+
+A mutação pertence ao módulo **`cards`**, sua casa natural. `fulfillment`
+consome o port público de crédito; **nunca** escreve na tabela `cards` pela
+própria infraestrutura. `cards` **nunca** importa `fulfillment` — dependência
+circular entre módulos é defeito (ADR-001).
 
 ## Reconciliação
 
-`ReconciliationRecord` com status `PENDING`, `RESOLVED`, `MANUAL_REVIEW`,
-`FAILED`.
+**Detecção, nunca reparo financeiro automático.** Nenhuma reconciliação cria
+crédito porque "parece faltar". Um fulfillment já `COMPLETED` com ledger
+ausente é **reportado**, não transicionado: regredir estado terminal
+contradiz a máquina de estados aceita.
 
-No MVP local, o job procura `Order PAID` sem estado de fulfillment conhecido e
-compara com `RechargeTransaction` e ledger.
+⚠️ A resolução administrativa de "pago e não entregável" permanece aberta em
+**A-18**.
 
-Métrica dura: `paid_orders_without_known_fulfillment_state = 0`.
+## Privacidade
 
-## Ticket
+Persistir apenas IDs opacos, `card_last4`, valores e timestamps. **Nunca** CPF,
+OTP, nome desnecessário, número completo de cartão ou payload de provider.
 
-Campos em SPEC-005 §9. Status: `ACTIVE`, `USED`, `EXPIRED`, `CANCELLED`.
+## Tools permitidas ao Sales Agent
 
-O QR é fictício e contém **token opaco**, nunca PII. O `qr_token` não vai para
-log nem para trace.
-
-⚠️ A validade exata do QR/bilhete é pendência declarada em PRD §19. Não
-invente prazo.
-
-## Comprovante
-
-Gerado somente após `COMPLETED`, com indicação clara de documento simulado e
-sem validade fiscal.
-
-## Recuperação após restart
-
-Estados críticos ficam persistidos. Após restart, localize `PAID`,
-`FULFILLING` e `RECONCILIATION_REQUIRED`. O job conceitual
-`find_stale_fulfillments` recupera operações paradas.
-
-## Tools permitidas ao agente
-
-`get_fulfillment_status`, `get_ticket`, `get_receipt`, `get_card_balance`.
+`get_fulfillment_status`, `get_ticket`, `get_receipt`, `get_card_balance` —
+todas somente leitura.
 
 ## Tools proibidas
 
-`apply_recharge`, `issue_ticket`, `retry_fulfillment`,
-`reconcile_fulfillment`, `set_ticket_status`, `set_balance`.
-
-Não crie nenhuma delas, sob nenhum nome equivalente.
-
-## Observabilidade
-
-Correlacione `conversation_id`, `trace_id` e os IDs de customer, card, order,
-payment, fulfillment, recharge, ticket e receipt.
-
-Nunca registre CPF completo, número completo de cartão, OTP ou `qr_token`.
+`apply_recharge`, `issue_ticket`, `retry_fulfillment`, `reconcile_fulfillment`,
+`set_ticket_status`, `set_balance`. Não crie nenhuma delas, sob nenhum nome
+equivalente.

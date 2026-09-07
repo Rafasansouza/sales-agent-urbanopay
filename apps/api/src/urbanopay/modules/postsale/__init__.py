@@ -1,11 +1,14 @@
 """Post-sale — consultas e comprovante.
 
-Fronteira de dominio declarada em ADR-001.
+Fronteira de domínio declarada em ADR-001.
 
-Consultas autenticadas de pos-venda e geracao de comprovante simulado.
+Consultas autenticadas de pós-venda e comprovante simulado.
 
-Documentos obrigatorios: SPEC-005; ADR-005.
+Documentos obrigatórios: SPEC-005; ADR-005.
 
-Estado: nao implementado. Ver o README deste diretorio antes de escrever
-qualquer codigo aqui.
+Estado: **sem módulo próprio, por decisão.** As consultas da SPEC-005 §14 já
+têm casa — saldo em `cards`, pedido em `orders`, pagamento em `payments`,
+status de entrega e comprovante em `fulfillment`. Um módulo aqui seria fachada
+sem lógica própria, e a composição natural dessas leituras é a camada de tools
+da SPEC-004, que ainda não existe. Ver o README deste diretório.
 """

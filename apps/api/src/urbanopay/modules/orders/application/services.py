@@ -7,8 +7,8 @@ Regras transversais:
 
 - o instante `now` é resolvido UMA vez por operação e usado em toda
   verificação de expiração e em toda escrita;
-- **ordem de lock: `Order` → `Approval`** (ADR-012, ordem global
-  `Order → Approval → Payment`);
+- **ordem de lock: `Order` → `Approval`** — subconjunto da ordem global
+  `Order → Approval → Payment → Card → Fulfillment` (ADR-012);
 - todas as operações daqui são **exclusivamente locais**, portanto usam a
   idempotência de fase única (§11.2): reivindicar a key, aplicar o efeito e
   marcar `COMPLETED` na mesma transação. Não existe `IN_PROGRESS` órfão

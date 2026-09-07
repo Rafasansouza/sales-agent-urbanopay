@@ -43,6 +43,9 @@ CONFIRMED         ──> PAYMENT_PENDING          (create_payment)
 PAYMENT_PENDING ─┬──> PAID                     (Payment APPROVED)
                  └──> CONFIRMED                (Payment terminal não aprovado)
 PAID              ──> FULFILLING               (SPEC-005)
+FULFILLING       ─┬──> COMPLETED               (Fulfillment COMPLETED)
+                  └──> FULFILLMENT_FAILED      (FAILED ou RECONCILIATION_REQUIRED)
+FULFILLMENT_FAILED──> FULFILLING               (reentrada por comando EXPLÍCITO)
 ```
 
 **Não existe `Order.APPROVED`** e **não existe `Order.FAILED`** — ambos foram
@@ -150,9 +153,13 @@ LLM.
 
 ## Concorrência
 
-**Ordem global de lock: `Order` → `Approval` → `Payment`.** Toda transação que
-toque mais de um desses agregados respeita essa ordem. Isolamento
-`READ COMMITTED` (ADR-012) — não altere.
+**Ordem global de lock, única em toda a base:
+`Order → Approval → Payment → Card → Fulfillment`** (ADR-012). Toda transação
+que toque mais de um desses agregados respeita essa ordem. Destes módulos
+participam os três primeiros elos; `Card` e `Fulfillment` entram com a
+SPEC-005 (ver `.claude/rules/backend/fulfillment.md`).
+
+Isolamento `READ COMMITTED` (ADR-012) — não altere.
 
 ## Tools proibidas
 

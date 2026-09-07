@@ -5,7 +5,8 @@ Contratos respeitados aqui:
 - devolvem entidades de domínio, nunca modelos ORM;
 - **nunca** executam commit;
 - consultas de cliente aplicam titularidade na **mesma** query;
-- `SELECT ... FOR UPDATE` respeita a ordem global `Order → Approval → Payment`.
+- `SELECT ... FOR UPDATE` respeita a ordem global
+  `Order → Approval → Payment → Card → Fulfillment` (ADR-012).
 
 Os itens são carregados em consulta separada, sem `relationship`: `FOR UPDATE`
 sobre um join travaria as linhas das duas tabelas, e os itens não precisam de

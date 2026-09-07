@@ -269,7 +269,10 @@ PAID
  └─> FULFILLING                     (SPEC-005)
        ├─> COMPLETED
        └─> FULFILLMENT_FAILED
+              └─> FULFILLING        (reentrada por comando explícito — SPEC-005 §5.1)
 ```
+
+`FULFILLMENT_FAILED → FULFILLING` foi acrescentada em 2026-09-07, na implementação da SPEC-005: com o mapeamento normativo de SPEC-005 §5.2, um fulfillment em `FAILED` ou `RECONCILIATION_REQUIRED` deixa o Order em `FULFILLMENT_FAILED`, e a reentrada prevista em SPEC-005 §5.1 não teria caminho sem essa aresta. A reentrada é **sempre por comando explícito**, nunca automática, e não gera nova cobrança. Sem ela, um Order pago cujo cartão foi reativado permaneceria permanentemente sem entrega.
 
 Transições inválidas => `INVALID_ORDER_STATE_TRANSITION`.
 
