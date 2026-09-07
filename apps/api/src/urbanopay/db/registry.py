@@ -32,7 +32,9 @@ from urbanopay.db.base import Base
 
 # Imports de models, um por módulo de domínio. Importar o módulo registra as
 # tabelas em Base.metadata como efeito colateral da declaração das classes.
+from urbanopay.modules.cards.infrastructure import models as _cards_models  # noqa: F401
 from urbanopay.modules.fare.infrastructure import models as _fare_models  # noqa: F401
+from urbanopay.modules.identity.infrastructure import models as _identity_models  # noqa: F401
 
 
 def target_metadata() -> MetaData:

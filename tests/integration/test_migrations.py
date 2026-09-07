@@ -81,17 +81,55 @@ def test_ciclo_completo_upgrade_downgrade_base_upgrade(settings: Settings) -> No
 
 
 @pytest.mark.integration
-def test_downgrade_um_passo_remove_somente_dados_de_referencia(settings: Settings) -> None:
-    """`downgrade -1` a partir de head desfaz o seed sem tocar o schema."""
+def test_ciclo_escopado_spec002(settings: Settings) -> None:
+    """`head → fare0002 → head`: a revision da SPEC-002 é reversível sem tocar
+    o Fare Engine — o seed tarifário permanece intacto."""
     cfg = alembic_config()
     command.upgrade(cfg, "head")
-    command.downgrade(cfg, "-1")
+    command.downgrade(cfg, "fare0002")
 
     engine = sa.create_engine(build_database_url(settings))
     try:
         with engine.connect() as conn:
-            # O schema permanece: a tabela existe e está sem os dados de
-            # referência.
+            inspector = sa.inspect(conn)
+            tables = set(inspector.get_table_names())
+        # Tabelas da SPEC-002 removidas; as do fare preservadas.
+        assert {"customers", "sessions", "auth_challenges", "cards"}.isdisjoint(tables)
+        assert {"fares", "fare_rules"}.issubset(tables)
+    finally:
+        engine.dispose()
+
+    command.upgrade(cfg, "head")
+    fares, rules = _seed_counts(settings)
+    assert fares == OFFICIAL_FARES_COUNT
+    assert rules == OFFICIAL_RULES_COUNT
+
+    engine = sa.create_engine(build_database_url(settings))
+    try:
+        with engine.connect() as conn:
+            inspector = sa.inspect(conn)
+            tables = set(inspector.get_table_names())
+        assert {"customers", "sessions", "auth_challenges", "cards"}.issubset(tables)
+    finally:
+        engine.dispose()
+
+
+@pytest.mark.integration
+def test_downgrade_do_seed_remove_somente_dados_de_referencia(settings: Settings) -> None:
+    """`downgrade fare0001` desfaz o seed tarifário sem tocar o schema do fare.
+
+    O alvo é explícito (não `-1`): com a SPEC-002 no topo da cadeia, descer até
+    `fare0001` atravessa `idc0001` (remove as tabelas de identidade) e
+    `fare0002` (remove apenas os dados de referência) — as tabelas do fare
+    permanecem, vazias.
+    """
+    cfg = alembic_config()
+    command.upgrade(cfg, "head")
+    command.downgrade(cfg, "fare0001")
+
+    engine = sa.create_engine(build_database_url(settings))
+    try:
+        with engine.connect() as conn:
             fares = conn.execute(sa.text("SELECT count(*) FROM fares")).scalar_one()
             rules = conn.execute(sa.text("SELECT count(*) FROM fare_rules")).scalar_one()
         assert int(fares) == 0

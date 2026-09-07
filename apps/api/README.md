@@ -21,11 +21,15 @@ O que existe:
   psycopg 3, session factory, Unit of Work e ambiente Alembic — ver
   `src/urbanopay/db/README.md`.
 
-- **SPEC-001 — Fare Engine**: primeiro domínio funcional, com domínio puro,
-  repositories, migrations (`fare0001`/`fare0002`) e tarifas oficiais de
-  referência — ver `src/urbanopay/modules/fare/README.md`.
+- **SPEC-001 — Fare Engine**: domínio puro, repositories, migrations
+  (`fare0001`/`fare0002`) e tarifas oficiais de referência — ver
+  `src/urbanopay/modules/fare/README.md`.
+- **SPEC-002 — Identity & Cards**: sessões, autenticação simulada por OTP
+  (HMAC + uso único atômico), titularidade de cartões, masking e autoridade
+  de perfil tarifário — ver os READMEs de `modules/identity/` e
+  `modules/cards/` (migration `idc0001`; identidades de demo são fixtures).
 
-O que **não** existe: SPEC-002 a SPEC-005, tools do agente, grafo LangGraph,
+O que **não** existe: SPEC-003 a SPEC-005, tools do agente, grafo LangGraph,
 integração de pagamento e endpoints de domínio. A API ainda não consome o
 banco: o engine não é criado no startup.
 

@@ -126,6 +126,8 @@ jobs:
       POSTGRES_USER: urbanopay
       POSTGRES_PASSWORD: urbanopay_ci_only
       APP_ENV: ci
+      # Segredo fictício de identidade, exclusivo do runner (SPEC-002).
+      IDENTITY_HASH_SECRET: ci_only_fictitious_identity_secret
       # Providers falsos: nenhuma chamada externa real em CI (ADR-007, ADR-010).
       LLM_PROVIDER: fake
       PAYMENT_PROVIDER: fake

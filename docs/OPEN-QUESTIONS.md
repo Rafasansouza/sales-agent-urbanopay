@@ -3,8 +3,13 @@
 **Projeto:** UrbanoPay Mobilidade
 **Última atualização:** 2026-09-07
 **Origem:** análise documental realizada no bootstrap do repositório, atualizada
-pela aceitação do ADR-012, pela persistence foundation e pela implementação da
-SPEC-001.
+pela aceitação do ADR-012, pela persistence foundation e pelas implementações
+das SPEC-001 e SPEC-002.
+
+Nota de segurança registrada (evolução futura, sem item próprio): a sessão
+mantém o mesmo ID após a autenticação (decisão aprovada para o MVP); rotação
+de session ID contra fixation é candidata a melhoria quando houver contrato
+definido.
 
 ## Propósito
 
@@ -223,32 +228,36 @@ pendência. Nenhum valor foi adotado no `.env.example`.
 
 ---
 
-## 🟡 A-11 — `FARE_PROFILE_CHANGED`: erro tipado ou evento de domínio?
+## ✅ A-11 — `FARE_PROFILE_CHANGED`: resultado semântico, com escopo dividido
 
-**Afeta:** SPEC-002, SPEC-001
-**Fonte:** SPEC-002 §8
+**Resolvido em 2026-09-07**, na aprovação do plano da SPEC-002, com separação
+explícita de responsabilidades:
 
-A SPEC diz "retornar evento/erro semântico `FARE_PROFILE_CHANGED`". As duas
-opções têm contratos e efeitos distintos: um erro tipado interrompe a chamada
-de tool e exige novo fluxo; um evento de domínio permite prosseguir com
-recálculo transparente.
+**SPEC-002 (implementado):** `FARE_PROFILE_CHANGED` é um **sinal semântico de
+resultado, não exceção**. `CardService.resolve_official_fare_profile` devolve
+`ProfileResolutionResult {official_profile, source=CARD, verified=true,
+declared_profile, signal}` — quando o perfil declarado difere do oficial, o
+campo `signal` carrega `FARE_PROFILE_CHANGED`. Nada falha: a divergência é um
+fato que obriga recálculo, e o perfil declarado nunca substitui o do cartão.
 
-**O que precisa ser decidido:** uma das duas naturezas, e o comportamento
-esperado do agente em cada caso.
+**SPEC-003/004 (pendente):** o recálculo, a invalidação de Quote e o fluxo da
+jornada diante do sinal são definidos pelas SPECs transacionais — não pela
+SPEC-002. O contrato exato da tool (como o sinal chega ao agente) pertence à
+SPEC-004.
 
 ---
 
-## 🟡 A-12 — Seed fictício não cobre os testes obrigatórios
+## ✅ A-12 — Seed fictício × testes obrigatórios
 
-**Afeta:** SPEC-002
-**Fonte:** SPEC-002 §13 vs §14
+**Resolvido em 2026-09-07**, na implementação da SPEC-002: identidades e
+cartões **não têm seed em migration** (decisão aprovada — diferentes das
+tarifas, não são dados de referência obrigatórios). O dataset nominal de §13
+(Mariana `****4821`/MEIA/21.50, Lucas, Camila BLOCKED, Cliente 4 com dois
+cartões) vive como **fixture de teste**, acrescido do cartão `EXPIRED` e do
+cenário cross-user que os testes de §14 exigem e o seed sugerido não cobria.
 
-O seed sugerido em §13 contempla cartões `ACTIVE` e `BLOCKED`. Os testes
-obrigatórios de §14 exigem também cartão `EXPIRED` (caso 7) e cenário
-cross-user (caso 8).
-
-Contornável via fixtures de teste, mas vale alinhar o seed quando SPEC-002 for
-implementada, para que o ambiente de demonstração cubra os mesmos cenários.
+Um seed demonstrativo oficial reproduzível poderá ser criado quando existir a
+jornada E2E real (SPEC-004) — decisão adiada, não esquecida.
 
 ---
 
@@ -448,6 +457,22 @@ Enquanto os logs de acesso ficarem fora do formato, a correlação por
 **Ação:** sobrescrever a configuração de log do uvicorn, ou substituir os logs
 de acesso por middleware próprio instrumentado. A decisão pertence à tarefa de
 instrumentação de observabilidade, junto com o restante do ADR-008.
+
+### 🟡 H-12 — Exposição do OTP simulado na jornada demonstrativa
+
+**Afeta:** SPEC-004 (demo E2E)
+**Origem:** decisão registrada na implementação da SPEC-002
+
+O OTP simulado é gerado com aleatoriedade criptográfica (`secrets`) e nunca
+aparece em resultado de serviço, log ou trace. **Não existe OTP fixo por
+configuração** — isso criaria um caminho permanente de autenticação conhecido
+(decisão aprovada). Testes usam um `FakeOtpGenerator` determinístico injetado.
+
+Consequência: hoje não há canal pelo qual o usuário da demonstração conheça o
+código. **É decisão pendente da demo, não falha da SPEC-002**: quando a
+SPEC-004 implementar a superfície de interação, deverá definir a exposição
+controlada do OTP simulado (ex.: painel de dev fora do contexto do LLM).
+O valor nunca pode chegar ao contexto do agente.
 
 ### 🟠 H-10 — `CODEOWNERS` ausente
 
