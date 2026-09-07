@@ -23,6 +23,9 @@ dependencies = [
     # Contratos tipados e configuração por ambiente (ADR-006).
     "pydantic>=2.10",
     "pydantic-settings>=2.7",
+    "sqlalchemy[asyncio]>=2.0",
+    "psycopg[binary]>=3.2",
+    "alembic>=1.14",
 ]
 
 # Dependências deliberadamente ausentes nesta fase:

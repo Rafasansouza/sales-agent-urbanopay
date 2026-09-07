@@ -55,12 +55,17 @@ Comportamento de LLM **nunca** é validado por asserção exata de string.
 
 ## Estado atual
 
-Nesta fase do bootstrap, apenas `unit/` possui testes: um teste de fumaça do
-health check.
+- `unit/` — teste de fumaça do health check, teste de arquitetura (domínio não
+  importa persistência) e testes do helper de event loop para Windows.
+- `integration/` — testes reais da persistence foundation (ADR-012): conexão,
+  Decimal, sessão, Unit of Work, naming convention e migrations. **Coleta
+  vazia reprova** nesta camada (H-07 resolvido para integration).
+- `e2e/` e `evals/` — vazios porque as SPECs não foram implementadas; nessas
+  duas camadas, zero testes coletados ainda é o resultado esperado.
 
-`integration/`, `e2e/` e `evals/` estão vazios porque as SPEC-001 a SPEC-005
-não foram implementadas. **Zero testes coletados nessas camadas é o resultado
-esperado**, não uma falha.
+Testes assíncronos usam `@pytest.mark.asyncio` (pytest-asyncio em modo
+strict). Em Windows, o hook `pytest_asyncio_loop_factories` do `conftest.py`
+fornece um `SelectorEventLoop`, exigido pelo psycopg async.
 
 ## Cenários que nunca podem ficar sem cobertura
 

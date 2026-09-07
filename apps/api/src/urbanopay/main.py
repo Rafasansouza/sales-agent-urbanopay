@@ -29,8 +29,10 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Ciclo de vida da aplicação.
 
-    Nesta fase não há pool de conexão nem cliente de provider para inicializar:
-    a persistência decidida em ADR-012 ainda não foi implementada.
+    A foundation de persistência existe (`urbanopay.db`), mas nenhum módulo
+    funcional a consome ainda: a API não cria engine nem pool no startup. O
+    engine passa a ser inicializado aqui quando o primeiro endpoint consumir o
+    banco, junto com a dependência "uma sessão por request" do ADR-012.
     """
     settings: Settings = get_settings()
     configure_logging(settings.log_level)

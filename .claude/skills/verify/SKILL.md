@@ -74,18 +74,15 @@ Troca de modelo de LLM **exige** execução da suíte de regressão completa
 
 ## Estado atual do repositório
 
-Nesta fase do bootstrap:
-
-- `test-integration`, `test-e2e` e `evals` **não coletam nenhum teste**, porque
-  as SPEC-001 a SPEC-005 ainda não foram implementadas. Zero testes coletados
-  nessas camadas é o resultado esperado, não uma falha.
-- Esses alvos toleram **exclusivamente** o código de saída 5 do pytest
-  ("nenhum teste coletado") e emitem aviso. Qualquer outro código reprova. A
-  tolerância deve ser removida quando a camada tiver testes — ver H-07 em
-  `docs/OPEN-QUESTIONS.md`.
-- `migrate` falha deliberadamente: ADR-012 está **Aceito** (Alembic é a
-  ferramenta decidida), mas a persistência ainda não foi implementada — o
-  Alembic não foi instalado e nenhuma migration foi materializada.
+- `test-integration` possui testes reais (persistence foundation) e **não
+  tolera** coleta vazia: zero testes coletados reprova. Requer PostgreSQL no
+  ar (`up`) e variáveis `POSTGRES_*` no ambiente.
+- `test-e2e` e `evals` ainda não coletam testes (SPECs não implementadas) e
+  toleram **exclusivamente** o código de saída 5 do pytest, com aviso. Ver
+  H-07 em `docs/OPEN-QUESTIONS.md`.
+- `migrate`, `migration`, `downgrade` e `migration-check` executam o Alembic
+  real. `versions/` está vazio até a primeira SPEC — `upgrade head` é no-op
+  válido e `alembic check` compara o metadata (vazio) com o schema.
 
 ## Depois de verificar
 

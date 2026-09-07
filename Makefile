@@ -11,7 +11,8 @@ UV      := uv
 
 .DEFAULT_GOAL := help
 .PHONY: help setup up down logs ps api fmt fmt-check lint typecheck \
-        test test-unit test-integration test-e2e evals verify migrate clean
+        test test-unit test-integration test-e2e evals verify \
+        migrate migration downgrade migration-check clean
 
 help: ## Lista os alvos disponíveis
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -63,13 +64,14 @@ test: test-unit ## Atalho para a suíte rápida (unit)
 test-unit: ## Regras de domínio, sem I/O externo
 	$(UV) run pytest -m unit
 
-# As camadas abaixo ainda não possuem testes, porque as SPEC-001 a SPEC-005 não
-# foram implementadas. O pytest retorna 5 quando nada é coletado, o que
-# reprovaria a CI. Toleramos SOMENTE o código 5, e de forma ruidosa: qualquer
-# outro código de saída continua reprovando.
+# As camadas e2e e evals ainda não possuem testes, porque as SPECs
+# correspondentes não foram implementadas. O pytest retorna 5 quando nada é
+# coletado, o que reprovaria a CI. Toleramos SOMENTE o código 5, e de forma
+# ruidosa: qualquer outro código de saída continua reprovando.
 #
 # ATENÇÃO: esta tolerância deve ser removida assim que a camada correspondente
-# tiver testes. Ver H-07 em docs/OPEN-QUESTIONS.md.
+# tiver testes — como já foi feito para a integration. Ver H-07 em
+# docs/OPEN-QUESTIONS.md.
 define run_optional_layer
 	@$(UV) run pytest -m $(1) || { code=$$?; \
 		if [ $$code -eq 5 ]; then \
@@ -79,7 +81,7 @@ define run_optional_layer
 endef
 
 test-integration: ## Fronteiras de banco e provider (requer `make up`)
-	$(call run_optional_layer,integration)
+	$(UV) run pytest -m integration
 
 test-e2e: ## Jornadas completas de compra (requer `make up`)
 	$(call run_optional_layer,e2e)
@@ -93,13 +95,22 @@ verify: fmt-check lint typecheck test-unit ## Suíte usada por /verify e pela CI
 	@echo "verify: OK"
 
 # --- Banco de dados ----------------------------------------------------------
+# A URL vem das variáveis POSTGRES_* (ambiente ou .env local). Nenhum destes
+# alvos conhece banco de produção — produção está fora do escopo do MVP.
 
-migrate: ## Aplica migrations (persistência ainda não implementada)
-	@echo "ERRO: Alembic ainda nao foi instalado."
-	@echo "ADR-012 esta Aceito (SQLAlchemy 2.x + psycopg 3 + Alembic), mas a"
-	@echo "infraestrutura de persistencia ainda nao foi implementada nesta fase."
-	@echo "Ver docs/adr/ADR-012-persistence-orm-migrations.md"
-	@exit 1
+migrate: ## Aplica migrations até head (requer `make up`)
+	$(UV) run alembic upgrade head
+
+migration: ## Gera migration candidata: make migration m="descricao"
+	@test -n "$(m)" || { echo 'uso: make migration m="descricao da mudanca"'; exit 1; }
+	$(UV) run alembic revision --autogenerate -m "$(m)"
+	@echo "ATENCAO: autogenerate produz uma CANDIDATA. Revise antes de aceitar (ADR-012)."
+
+downgrade: ## Reverte a última migration aplicada
+	$(UV) run alembic downgrade -1
+
+migration-check: ## Falha se os modelos divergirem das migrations
+	$(UV) run alembic check
 
 # --- Limpeza -----------------------------------------------------------------
 

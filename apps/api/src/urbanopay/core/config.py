@@ -16,7 +16,7 @@ from __future__ import annotations
 from enum import StrEnum
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -62,6 +62,18 @@ class Settings(BaseSettings):
     app_env: AppEnv = AppEnv.LOCAL
     app_name: str = "urbanopay-api"
     log_level: str = "INFO"
+
+    # --- PostgreSQL (ADR-004, ADR-012) ---
+    # Fonte canônica de configuração do banco. A URL do SQLAlchemy é derivada
+    # destes campos por `urbanopay.db.engine.build_database_url`; não existe
+    # uma segunda fonte de verdade em forma de DATABASE_URL.
+    postgres_host: str = "localhost"
+    postgres_port: int = 5432
+    postgres_db: str = "urbanopay"
+    postgres_user: str = "urbanopay"
+    # SecretStr: nunca aparece em repr, log ou trace. Sem default utilizável —
+    # o valor vem do ambiente ou do `.env` local.
+    postgres_password: SecretStr = SecretStr("")
 
     # --- LLM (ADR-010) ---
     # O acesso em runtime sempre passa por uma abstração de provider. Nenhum

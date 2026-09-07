@@ -2,19 +2,19 @@
 
 Fonte: ADR-004 (PostgreSQL autoritativo), ADR-012 (Aceito).
 
-Arquitetura decidida: SQLAlchemy 2.x com ORM declarativo tipado, psycopg 3,
-runtime assíncrono (`AsyncSession`), Repository Pattern, Unit of Work e Alembic
-para migrations.
+Foundation **implementada** nesta camada:
 
-Estado: **decidido, ainda não implementado**. A implementação nasce em tarefa
-posterior, junto com a primeira SPEC que precisar dela.
+- `base.py` — `Base` declarativa e `NAMING_CONVENTION` determinística;
+- `engine.py` — fábrica do `AsyncEngine` (psycopg 3, `postgresql+psycopg`);
+- `session.py` — `async_sessionmaker` com `expire_on_commit=False`;
+- `unit_of_work.py` — implementação SQLAlchemy do port
+  `urbanopay.core.persistence.UnitOfWork`;
+- `registry.py` — agregação de models para o Alembic;
+- `migrations/` — ambiente do Alembic (sem revisions ainda).
 
-Enquanto isso:
-
-- as dependências previstas (SQLAlchemy, psycopg 3, Alembic) não foram
-  instaladas;
-- nenhum modelo, schema ou migration existe;
-- `make migrate` falha deliberadamente, porque não há Alembic instalado.
+O que **não** existe, por decisão: modelos funcionais, repositories e
+migrations de negócio — nascem com as SPECs. Nenhum endpoint consome o banco
+ainda, então a API não cria engine no startup.
 
 Ver o README deste diretório e `docs/adr/ADR-012-persistence-orm-migrations.md`.
 """

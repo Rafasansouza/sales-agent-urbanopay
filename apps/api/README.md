@@ -16,10 +16,15 @@ O que existe:
 - logging estruturado em JSON;
 - ponto de acoplamento da telemetria, desligado;
 - `GET /api/v1/health`;
-- as 12 fronteiras de domínio de ADR-001, vazias e documentadas.
+- as 12 fronteiras de domínio de ADR-001, vazias e documentadas;
+- **persistence foundation** (ADR-012): base declarativa, engine assíncrono
+  psycopg 3, session factory, Unit of Work e ambiente Alembic — ver
+  `src/urbanopay/db/README.md`.
 
-O que **não** existe: SPEC-001 a SPEC-005, persistência, tools do agente,
-grafo LangGraph, integração de pagamento e seeds.
+O que **não** existe: SPEC-001 a SPEC-005, modelos e repositories funcionais,
+migrations de negócio, tools do agente, grafo LangGraph, integração de
+pagamento e seeds. A API ainda não consome o banco: o engine não é criado no
+startup.
 
 ## Estrutura
 
@@ -28,7 +33,8 @@ src/urbanopay/
 ├── main.py              fábrica da aplicação, sem regra de negócio
 ├── core/                configuração, erros, logging, telemetria
 ├── api/v1/              camada HTTP versionada, routers finos
-├── db/                  persistência decidida (ADR-012); implementação futura
+├── db/                  persistence foundation (ADR-012): base, engine,
+│                        session, unit of work, registry e migrations
 ├── providers/           portas de LLM e de pagamento
 │   ├── llm/             ADR-010
 │   └── payments/        ADR-007
