@@ -9,13 +9,29 @@ Um hook Stop bloqueante em falha de lint pode aprisionar a sessão — decisão
 registrada em `docs/OPEN-QUESTIONS.md` (H-03).
 
 Contrato: falha aberto. Qualquer erro inesperado resulta em saída 0 silenciosa.
+
+## Escopo de análise é ancorado, nunca herdado do cwd
+
+Este hook **não** usa `Path.cwd()` para decidir o que analisar. A raiz vem de
+`CLAUDE_PROJECT_DIR` e, na sua ausência, da localização deste próprio arquivo.
+Todo comando externo recebe a raiz explicitamente (`git -C <raiz>`, `ruff
+<raiz>`) e roda com `cwd=<raiz>`.
+
+O motivo é concreto: um `cd` durante a sessão faz o cwd apontar para um
+subdiretório, e um escopo herdado do cwd reduziria **em silêncio** o conjunto
+de arquivos verificados — o hook diria "tudo certo" tendo olhado uma fração do
+repositório. Silêncio é o pior desfecho possível para uma verificação.
+
+O cwd pode aparecer como informação contextual, nunca como raiz de análise.
 """
 
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
+from pathlib import Path
 
 GIT_TIMEOUT_SECONDS = 5
 CHECK_TIMEOUT_SECONDS = 90
@@ -23,8 +39,34 @@ CHECK_TIMEOUT_SECONDS = 90
 # Extensões que disparam verificação de qualidade.
 PYTHON_SUFFIX = ".py"
 
+# Este arquivo vive em `<raiz>/.claude/hooks/`, logo a raiz é o segundo pai.
+_ROOT_DEPTH_FROM_THIS_FILE = 2
 
-def run(command: tuple[str, ...], timeout: int) -> tuple[int, str] | None:
+
+def project_root() -> Path:
+    """Raiz canônica do projeto, resolvida sem consultar o cwd.
+
+    Ordem de resolução:
+
+    1. `CLAUDE_PROJECT_DIR`, quando definida e existente — é o contrato do
+       Claude Code e a fonte preferida;
+    2. a localização deste arquivo, como fallback determinístico.
+
+    O fallback existe para que o hook continue correto quando invocado fora do
+    Claude Code (por exemplo, em teste), e é seguro porque o caminho do próprio
+    script não depende de onde o processo foi iniciado.
+    """
+    raw = os.environ.get("CLAUDE_PROJECT_DIR")
+    if raw:
+        candidate = Path(raw)
+        if candidate.is_dir():
+            return candidate.resolve()
+
+    return Path(__file__).resolve().parents[_ROOT_DEPTH_FROM_THIS_FILE]
+
+
+def run(command: tuple[str, ...], timeout: int, cwd: Path) -> tuple[int, str] | None:
+    """Executa um comando externo a partir de `cwd`, sempre explícito."""
     try:
         result = subprocess.run(
             command,
@@ -32,6 +74,7 @@ def run(command: tuple[str, ...], timeout: int) -> tuple[int, str] | None:
             text=True,
             timeout=timeout,
             check=False,
+            cwd=cwd,
         )
     except (OSError, subprocess.SubprocessError):
         return None
@@ -39,9 +82,15 @@ def run(command: tuple[str, ...], timeout: int) -> tuple[int, str] | None:
     return result.returncode, output.strip()
 
 
-def changed_files() -> list[str] | None:
-    """Arquivos alterados na árvore de trabalho, rastreados ou não."""
-    result = run(("git", "status", "--porcelain"), GIT_TIMEOUT_SECONDS)
+def changed_files(root: Path) -> list[str] | None:
+    """Arquivos alterados na árvore de trabalho, rastreados ou não.
+
+    `git -C <raiz>` garante que o repositório inspecionado é o do projeto, e
+    não aquele que por acaso contém o cwd. O formato porcelain devolve caminhos
+    relativos à raiz do repositório, o que mantém o filtro por extensão
+    independente de onde o processo roda.
+    """
+    result = run(("git", "-C", str(root), "status", "--porcelain"), GIT_TIMEOUT_SECONDS, root)
     if result is None or result[0] != 0:
         return None
 
@@ -55,6 +104,31 @@ def changed_files() -> list[str] | None:
             entry = entry.split(" -> ", 1)[1]
         files.append(entry.strip('"'))
     return files
+
+
+def emit(text: str) -> None:
+    """Escreve o relatório sem depender do encoding do console.
+
+    Em console cp1252 — o padrão em Windows — caracteres como `──` levantam
+    `UnicodeEncodeError`. Combinado com o fail-open do contrato, isso fazia o
+    relatório **desaparecer em silêncio**: o hook detectava o problema, tentava
+    reportá-lo e o turno encerrava como se estivesse tudo certo. É o mesmo
+    modo de falha que a ancoragem de escopo elimina, só que na saída.
+
+    A escrita cai para bytes UTF-8 quando o encoding do console não dá conta,
+    preservando o texto integral.
+    """
+    try:
+        sys.stdout.write(text)
+        sys.stdout.flush()
+    except UnicodeEncodeError:
+        buffer = getattr(sys.stdout, "buffer", None)
+        if buffer is None:  # pragma: no cover - console sem buffer binário
+            sys.stdout.write(text.encode("ascii", "replace").decode("ascii"))
+            sys.stdout.flush()
+            return
+        buffer.write(text.encode("utf-8"))
+        buffer.flush()
 
 
 def summarize(output: str, max_lines: int = 12) -> str:
@@ -72,7 +146,9 @@ def main() -> int:
     except (OSError, ValueError, json.JSONDecodeError):
         pass
 
-    files = changed_files()
+    root = project_root()
+
+    files = changed_files(root)
     if not files:
         # Sem alterações, ou git indisponível: nada a verificar.
         return 0
@@ -85,13 +161,15 @@ def main() -> int:
     problems: list[str] = []
     skipped: list[str] = []
 
+    # O alvo é a RAIZ, passada explicitamente. Nunca `.`, que seria o cwd.
+    target = str(root)
     checks = (
-        ("ruff format --check", ("uv", "run", "ruff", "format", "--check", ".")),
-        ("ruff check", ("uv", "run", "ruff", "check", ".")),
+        ("ruff format --check", ("uv", "run", "ruff", "format", "--check", target)),
+        ("ruff check", ("uv", "run", "ruff", "check", target)),
     )
 
     for label, command in checks:
-        result = run(command, CHECK_TIMEOUT_SECONDS)
+        result = run(command, CHECK_TIMEOUT_SECONDS, root)
         if result is None:
             skipped.append(label)
             continue
@@ -103,6 +181,9 @@ def main() -> int:
         return 0
 
     report: list[str] = ["", "── verify_before_stop (advisório) ──"]
+    # A raiz analisada entra no relatório de propósito: é o que torna
+    # verificável que o escopo não mudou por causa de um `cd`.
+    report.append(f"raiz analisada: {root}")
     report.append(f"{len(python_files)} arquivo(s) Python alterado(s).")
 
     if problems:
@@ -116,7 +197,7 @@ def main() -> int:
         report.append("")
         report.append("Não executado (ferramenta indisponível): " + ", ".join(skipped))
 
-    sys.stdout.write("\n".join(report) + "\n")
+    emit("\n".join(report) + "\n")
 
     # Advisório por decisão: sempre 0, nunca bloqueia o encerramento.
     return 0
