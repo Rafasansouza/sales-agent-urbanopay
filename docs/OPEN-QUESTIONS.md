@@ -1,8 +1,9 @@
 # Questões Abertas
 
 **Projeto:** UrbanoPay Mobilidade
-**Última atualização:** 2026-08-23
-**Origem:** análise documental realizada no bootstrap do repositório.
+**Última atualização:** 2026-08-29
+**Origem:** análise documental realizada no bootstrap do repositório, atualizada
+pela aceitação do ADR-012.
 
 ## Propósito
 
@@ -313,9 +314,66 @@ demonstração.
 ADR-013 fixou Python 3.13. As dependências instaladas no bootstrap
 (FastAPI, Uvicorn, Pydantic, Ruff, mypy, pytest) são compatíveis.
 
-**Não validado:** `langgraph`, driver PostgreSQL, `pgvector` e SDK do Mercado
-Pago. A validação é pré-requisito de ADR-012 e da implementação de SPEC-004.
-Incompatibilidade exige novo ADR, não alteração silenciosa do ADR-013.
+**Resolvido documentalmente em 2026-08-29, pela aceitação do ADR-012:**
+
+- SQLAlchemy 2.0 possui suporte a Python 3.13;
+- greenlet possui suporte a Python 3.13;
+- psycopg 3 suporta Python 3.13 e PostgreSQL 17.
+
+Isso deixou de bloquear a aceitação do ADR-012. A implementação da persistência
+ainda deverá validar resolução via `uv`, conexão real e testes de integração.
+
+**Permanece não validado:** `langgraph` e SDK do Mercado Pago. A validação é
+pré-requisito das SPEC-003 e SPEC-004. Incompatibilidade exige novo ADR, não
+alteração silenciosa do ADR-013.
+
+### 🟠 H-11 — Persistência das tabelas internas do LangGraph
+
+ADR-002 prefere checkpoints duráveis em PostgreSQL. O checkpointer oficial do
+LangGraph cria e gerencia **as próprias tabelas**, tipicamente por um `setup()`
+executado em runtime, fora do controle de migrations versionadas.
+
+Isso colide com a exigência de CLAUDE.md e ADR-004 de que **toda mudança de
+schema tenha migration versionada**.
+
+O ADR-012 declara explicitamente que governa **apenas as tabelas pertencentes à
+aplicação e ao domínio UrbanoPay**, e deixa esta questão fora do seu escopo.
+
+**O que precisa ser decidido:** como as tabelas internas do LangGraph são
+criadas e versionadas — schema separado, adoção pelo Alembic, ou outra
+estratégia.
+
+**Ação obrigatória até lá:** nenhum `setup()` automático de schema do LangGraph
+pode ser introduzido.
+
+**Encaminhamento:** exige ADR próprio, **antes** da implementação da SPEC-004.
+
+### 🟠 A-13 — Ciclo de vida de `IdempotencyRecord` em `IN_PROGRESS`
+
+**Bloqueia:** SPEC-003
+**Fonte:** SPEC-003 §11
+
+SPEC-003 §11 define `IdempotencyRecord` com um campo `status`, o que sugere um
+ciclo de vida em duas fases — reivindicar a chave, depois concluir a operação.
+Esse desenho é o que permite que duas requisições concorrentes com a mesma
+chave não produzam efeito duplicado.
+
+Porém a SPEC **não define o comportamento para um registro obsoleto**: se um
+processo reivindica a chave e morre antes de concluir, o registro fica em
+`IN_PROGRESS` indefinidamente.
+
+**O que precisa ser decidido:**
+
+- um registro `IN_PROGRESS` expira? Após quanto tempo?
+- pode ser reivindicado por outra requisição, ou exige intervenção?
+- qual a política de retenção de registros concluídos?
+
+**Impacto:** sem essa definição, uma falha de processo no meio de
+`create_payment` pode bloquear permanentemente novas tentativas para aquela
+chave, ou — na interpretação oposta — permitir efeito duplicado.
+
+A decisão pertence à definição de Orders e Payments e deve ser resolvida
+**antes** da SPEC-003, não dentro do ADR-012.
 
 ### 🟡 H-07 — Tolerância ao código de saída 5 do pytest
 
