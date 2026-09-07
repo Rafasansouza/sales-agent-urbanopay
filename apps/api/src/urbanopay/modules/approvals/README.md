@@ -1,52 +1,71 @@
-# Approvals — aprovacao humana
+# Approvals — aprovação humana
 
-**Fronteira de dominio:** ADR-001
-**Documentos obrigatorios:** SPEC-003
-**ADRs aplicaveis:** ADR-005
-**Estado:** nao implementado
+**Fronteira de domínio:** ADR-001
+**Documentos obrigatórios:** SPEC-003 §7
+**ADRs aplicáveis:** ADR-005, ADR-012
+**Estado:** implementado (agregado e persistência)
 
 ## Responsabilidade
 
-Politica de aprovacao operacional. Regra vigente: recarga acima de R$ 200,00 exige aprovacao.
+Representa a decisão humana sobre um Order. Guarda o agregado `Approval`, suas
+transições e a trilha de auditoria — **ator e instante** em toda decisão.
 
-## Entidades previstas
+A política do limiar (`order.total > R$ 200,00`, estritamente maior) vive em
+`ApprovalPolicy`, no módulo `orders`, porque é lá que ela é aplicada e
+congelada na criação do Order.
 
-- `Approval`
+Os **comandos** `approve_order` e `reject_order` também vivem em `orders`: o
+efeito primário deles é uma transição do Order, e manter a orquestração lá
+evita dependência circular entre os módulos. Este módulo é deliberadamente
+passivo — ele **nunca importa `orders`**.
+
+## Entidades
+
+- `Approval` — `PENDING → APPROVED | REJECTED`
 
 ## Tools permitidas ao Sales Agent
 
-- `get_approval_status (somente leitura)`
+- `get_approval_status` (somente leitura)
 
 ## Tools proibidas
 
-- `approve_order pelo agente`
-- `qualquer tool que aprove ou rejeite`
+- `approve_order` pelo agente
+- qualquer tool que aprove ou rejeite
 
-Nenhuma delas pode ser criada sob nome equivalente ou disfarcada como tool
-generica.
+Nenhuma delas pode ser criada sob nome equivalente ou disfarçada como tool
+genérica.
 
-## Invariantes e bloqueios
+## Invariantes
 
-- A politica fica encapsulada em ApprovalPolicy, nunca espalhada em if.
-- BLOQUEADO por A-07: a interface administrativa de aprovacao nao esta especificada, logo um Order em REQUIRES_APPROVAL nao tem caminho de saida no MVP.
-- Ver tambem C-01 sobre a ordem entre confirmacao e aprovacao.
+- A política fica encapsulada em `ApprovalPolicy`, nunca espalhada em `if`, e o
+  valor do limiar não aparece fora dela — nem como `CHECK` de banco, para não
+  criar uma segunda fonte da mesma regra.
+- Estados terminais **não** retornam a `PENDING` e não são redecididos.
+- Sem TTL e sem estado `CANCELLED` no MVP: a SPEC não define nenhum dos dois.
+- Uma aprovação por Order (`uq_approvals_order_id`).
+- `PENDING` não tem decisão registrada; todo terminal tem ator **e** instante
+  (`ck_approvals_decision_audit_complete`).
+- `decided_by` é identificador **opaco** de operador — nunca nome, e-mail ou
+  CPF.
 
-## Estrutura esperada quando implementado
+## Pendências que ainda afetam o módulo
+
+⚠️ **A-07** — a interface administrativa pela qual um humano decide não está
+especificada. O domínio, a persistência e os comandos existem e são testados;
+sem essa superfície, um Order em `REQUIRES_APPROVAL` depende de acionamento
+programático para seguir adiante.
+
+## Estrutura
 
 ```text
 approvals/
-├── domain/          entidades, value objects, erros tipados, regras puras
-├── application/     use cases e servicos
-└── infrastructure/  repositorios e adaptadores
+├── domain/          Approval, ApprovalStatus, erros, port do repository
+└── infrastructure/  model ORM e repository
 ```
 
-Direcao de dependencia: `domain` nao importa `application` nem
+Não existe `application/`: este módulo não tem caso de uso próprio — quem
+detém a transação é `orders`. Criar um serviço aqui só para delegar
+adicionaria camada sem responsabilidade.
+
+Direção de dependência: `domain` não importa `application` nem
 `infrastructure`. Ver `.claude/rules/architecture.md`.
-
-## Antes de implementar
-
-1. Leia a SPEC correspondente por inteiro, nao de memoria.
-2. Leia `docs/OPEN-QUESTIONS.md` e confirme que nenhuma pendencia bloqueia a
-   tarefa.
-3. Confirme que os ADRs necessarios estao com status Aceito.
-4. Use a skill `prepare-task` antes de escrever codigo.
