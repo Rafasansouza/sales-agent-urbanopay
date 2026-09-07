@@ -4,7 +4,8 @@ Validam que a infraestrutura do Alembic funciona contra PostgreSQL real:
 `upgrade head` executa e `alembic check` não encontra divergência entre o
 metadata da aplicação e o schema do banco.
 
-A cadeia atual é `fare0001 → fare0002 → idc0001 → ord0001 → pay0001`. Os
+A cadeia atual é
+`fare0001 → fare0002 → idc0001 → ord0001 → pay0001 → ful0001`. Os
 testes de `alembic check` e do ciclo completo `head → base → head` valem para
 toda a cadeia automaticamente: qualquer divergência entre `models.py` e
 migration, em qualquer módulo, reprova aqui. Os ciclos **escopados** existem
@@ -162,6 +163,45 @@ def test_ciclo_escopado_spec003(settings: Settings) -> None:
         engine.dispose()
 
     # O seed tarifário atravessa o ciclo intacto.
+    fares, rules = _seed_counts(settings)
+    assert fares == OFFICIAL_FARES_COUNT
+    assert rules == OFFICIAL_RULES_COUNT
+
+
+@pytest.mark.integration
+def test_ciclo_escopado_spec005(settings: Settings) -> None:
+    """`head → pay0001 → head`: a revision da SPEC-005 é reversível.
+
+    Descer até `pay0001` remove `fulfillments`, `card_ledger_entries` e
+    `receipts` sem tocar Orders, Payments, identidade, cartões nem o seed
+    tarifário.
+    """
+    spec005_tables = {"fulfillments", "card_ledger_entries", "receipts"}
+    anteriores = {"orders", "payments", "cards", "customers", "idempotency_records"}
+
+    cfg = alembic_config()
+    command.upgrade(cfg, "head")
+    command.downgrade(cfg, "pay0001")
+
+    engine = sa.create_engine(build_database_url(settings))
+    try:
+        with engine.connect() as conn:
+            tables = set(sa.inspect(conn).get_table_names())
+        assert spec005_tables.isdisjoint(tables)
+        assert anteriores.issubset(tables)
+    finally:
+        engine.dispose()
+
+    command.upgrade(cfg, "head")
+
+    engine = sa.create_engine(build_database_url(settings))
+    try:
+        with engine.connect() as conn:
+            tables = set(sa.inspect(conn).get_table_names())
+        assert spec005_tables.issubset(tables)
+    finally:
+        engine.dispose()
+
     fares, rules = _seed_counts(settings)
     assert fares == OFFICIAL_FARES_COUNT
     assert rules == OFFICIAL_RULES_COUNT
