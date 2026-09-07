@@ -48,7 +48,6 @@ Consulte docs/OPEN-QUESTIONS.md. Bloqueios conhecidos hoje:
 
 - C-01 — ordem entre confirmação do passageiro e aprovação humana
 - C-02 — retentativa de pagamento sem transição definida
-- A-04 — composição de viagem exclusivamente de metrô
 - A-05 — módulo catalog sem SPEC
 - A-06 — calculate_usage_cost sem especificação
 - A-07 — interface de aprovação humana sem especificação

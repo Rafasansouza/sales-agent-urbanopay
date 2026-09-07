@@ -21,10 +21,13 @@ O que existe:
   psycopg 3, session factory, Unit of Work e ambiente Alembic — ver
   `src/urbanopay/db/README.md`.
 
-O que **não** existe: SPEC-001 a SPEC-005, modelos e repositories funcionais,
-migrations de negócio, tools do agente, grafo LangGraph, integração de
-pagamento e seeds. A API ainda não consome o banco: o engine não é criado no
-startup.
+- **SPEC-001 — Fare Engine**: primeiro domínio funcional, com domínio puro,
+  repositories, migrations (`fare0001`/`fare0002`) e tarifas oficiais de
+  referência — ver `src/urbanopay/modules/fare/README.md`.
+
+O que **não** existe: SPEC-002 a SPEC-005, tools do agente, grafo LangGraph,
+integração de pagamento e endpoints de domínio. A API ainda não consome o
+banco: o engine não é criado no startup.
 
 ## Estrutura
 

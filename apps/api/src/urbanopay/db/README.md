@@ -11,8 +11,8 @@
 | `engine.py` | `build_database_url` (a partir de `POSTGRES_*`) e fábrica do `AsyncEngine` |
 | `session.py` | `create_session_factory` — `async_sessionmaker` com `expire_on_commit=False` |
 | `unit_of_work.py` | `SqlAlchemyUnitOfWork`, implementação do port `core.persistence.UnitOfWork` |
-| `registry.py` | Agregação dos models para o Alembic (hoje: nenhum model) |
-| `migrations/` | Ambiente do Alembic — `env.py`, template e `versions/` (vazio) |
+| `registry.py` | Agregação dos models para o Alembic (registrados: `fare`) |
+| `migrations/` | Ambiente do Alembic — `versions/` contém as revisions do Fare Engine |
 
 Stack validada empiricamente em Python 3.13: SQLAlchemy 2.0.x (asyncio),
 psycopg 3.3.x, Alembic 1.19.x, greenlet 3.5.x.
@@ -67,8 +67,11 @@ Regra permanente: `autogenerate → candidata → revisão humana obrigatória`.
 Índices parciais, `CHECK`s e invariantes específicas do PostgreSQL exigem
 revisão explícita. Migration destrutiva exige revisão humana sinalizada no PR.
 
-`versions/` está vazio por decisão: nenhuma revision artificial. A primeira
-migration real nasce com a primeira SPEC implementada.
+Revisions existentes: `fare0001` (schema do Fare Engine, incluindo
+`CREATE EXTENSION IF NOT EXISTS btree_gist` e as EXCLUDE constraints de
+vigência) e `fare0002` (dados de referência do MVP — 12 tarifas + regra de
+integração). O ciclo `upgrade head → downgrade base → upgrade head` é coberto
+por teste de integração.
 
 ## Windows
 
@@ -80,8 +83,8 @@ Windows). Solução específica do Python 3.13 — rever antes de migrar para 3.
 
 ## O que ainda não existe, por decisão
 
-- Modelos funcionais, repositories e migrations de negócio — nascem com as
-  SPECs.
+- Persistência dos demais módulos (identity, cards, orders, ...) — nasce com
+  as respectivas SPECs.
 - A dependência FastAPI "uma sessão por request" — entra com o primeiro
   endpoint que consumir o banco. A API **não** cria engine no startup.
 - Checkpointer do LangGraph — fora do escopo do ADR-012; exige ADR próprio

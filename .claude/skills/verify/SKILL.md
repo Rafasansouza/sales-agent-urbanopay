@@ -81,8 +81,9 @@ Troca de modelo de LLM **exige** execução da suíte de regressão completa
   toleram **exclusivamente** o código de saída 5 do pytest, com aviso. Ver
   H-07 em `docs/OPEN-QUESTIONS.md`.
 - `migrate`, `migration`, `downgrade` e `migration-check` executam o Alembic
-  real. `versions/` está vazio até a primeira SPEC — `upgrade head` é no-op
-  válido e `alembic check` compara o metadata (vazio) com o schema.
+  real. Revisions existentes: `fare0001` (schema do Fare Engine) e `fare0002`
+  (tarifas de referência). `alembic check` compara os models registrados com o
+  schema do banco.
 
 ## Depois de verificar
 

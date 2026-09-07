@@ -18,9 +18,12 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from decimal import Decimal
+from pathlib import Path
 
 import pytest
 import pytest_asyncio
+from alembic import command
+from alembic.config import Config as AlembicConfig
 from sqlalchemy import CheckConstraint, MetaData, Numeric, String, UniqueConstraint, text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -34,7 +37,25 @@ from urbanopay.db.engine import create_engine_from_settings
 from urbanopay.db.session import create_session_factory
 from urbanopay.db.unit_of_work import SqlAlchemyUnitOfWork
 
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
 PROBE_SCHEMA = "it_foundation"
+
+
+def alembic_config() -> AlembicConfig:
+    """Configuração do Alembic com caminhos absolutos, independente do cwd."""
+    cfg = AlembicConfig(str(REPO_ROOT / "alembic.ini"))
+    cfg.set_main_option(
+        "script_location",
+        str(REPO_ROOT / "apps" / "api" / "src" / "urbanopay" / "db" / "migrations"),
+    )
+    return cfg
+
+
+@pytest.fixture(scope="session")
+def migrated() -> None:
+    """Garante o banco de teste em `head` antes dos testes que usam schema real."""
+    command.upgrade(alembic_config(), "head")
 
 
 class ProbeBase(DeclarativeBase):

@@ -48,11 +48,17 @@ Inverter essa ordem produz valor errado.
 |---|---|---|
 | `SINGLE` | exatamente um segmento | 0% |
 | `COMMON` | dois ou mais segmentos exclusivamente de ônibus | 0% |
-| `INTEGRATION` | ao menos um ônibus e ao menos um metrô | 15% vigente inicial |
+| `INTEGRATION` | ao menos um ônibus e ao menos um metrô | regra vigente (15% inicial) |
 
-⚠️ Composição com dois ou mais segmentos exclusivamente de metrô **não está
-definida** na SPEC. Ver A-04 em `docs/OPEN-QUESTIONS.md`. Não invente
-comportamento: reporte a lacuna.
+Composição com dois ou mais segmentos exclusivamente de metrô →
+`UNSUPPORTED_TRIP_COMPOSITION` (decisão A-04, **resolvida**: interpretação
+conservadora aprovada — nunca classificar como COMMON, nunca inventar
+categoria).
+
+Decisões estruturais vigentes: METRO com `line_code` →
+`INVALID_SEGMENT_STRUCTURE`; BUS sem linha → `BUS_LINE_REQUIRED`;
+`FARE_LINE_NOT_FOUND` é específico de BUS — METRO sem tarifa vigente é sempre
+`FARE_NOT_AVAILABLE`.
 
 ## Dinheiro
 
