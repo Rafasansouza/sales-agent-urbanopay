@@ -10,9 +10,9 @@ Como funciona: importar um módulo de models registra suas tabelas em
 `Base.metadata` como efeito colateral da declaração das classes. O `env.py`
 do Alembic importa **este** módulo e, através dele, enxerga o schema completo.
 
-Estado atual: SPEC-001 (`fare`), SPEC-002 (`identity`, `cards`) e SPEC-003
+Estado atual: SPEC-001 (`fare`), SPEC-002 (`identity`, `cards`), SPEC-003
 (`orders`, `approvals`, `payments`, além da tabela transversal de
-idempotência) possuem modelos registrados. Nenhuma tabela placeholder e
+idempotência) e SPEC-005 (`fulfillment`) possuem modelos registrados. Nenhuma tabela placeholder e
 nenhum import fictício: um módulo só aparece aqui quando tem persistência
 real.
 
@@ -41,6 +41,7 @@ from urbanopay.db.base import Base
 from urbanopay.modules.approvals.infrastructure import models as _approvals_models  # noqa: F401
 from urbanopay.modules.cards.infrastructure import models as _cards_models  # noqa: F401
 from urbanopay.modules.fare.infrastructure import models as _fare_models  # noqa: F401
+from urbanopay.modules.fulfillment.infrastructure import models as _fulfillment_models  # noqa: F401
 from urbanopay.modules.identity.infrastructure import models as _identity_models  # noqa: F401
 from urbanopay.modules.orders.infrastructure import models as _orders_models  # noqa: F401
 from urbanopay.modules.payments.infrastructure import models as _payments_models  # noqa: F401
