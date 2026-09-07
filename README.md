@@ -59,7 +59,7 @@ silenciosamente.
 | SPEC | Domínio | Estado |
 |---|---|---|
 | [SPEC-001](docs/specs/SPEC-001-fare-engine.md) | Fare Engine | **Implementada** |
-| [SPEC-002](docs/specs/SPEC-002-cards-identity.md) | Cards & Identity | Não implementada |
+| [SPEC-002](docs/specs/SPEC-002-cards-identity.md) | Cards & Identity | **Implementada** |
 | [SPEC-003](docs/specs/SPEC-003-orders-payments.md) | Orders & Payments | Não implementada |
 | [SPEC-004](docs/specs/SPEC-004-sales-agent-tools.md) | Sales Agent & Tools | Não implementada |
 | [SPEC-005](docs/specs/SPEC-005-fulfillment-post-sale.md) | Fulfillment & Post-Sale | Não implementada |

@@ -75,6 +75,21 @@ class Settings(BaseSettings):
     # o valor vem do ambiente ou do `.env` local.
     postgres_password: SecretStr = SecretStr("")
 
+    # --- Identity & Cards (SPEC-002) ---
+    # Segredo do HMAC usado para derivar identificadores de lookup (CPF) e
+    # proteger hashes de OTP. Sem default utilizável; valor vem do ambiente ou
+    # do `.env` local — em CI/local, somente valores fictícios.
+    #
+    # ⚠️ Rotação futura deste segredo exige estratégia de migração dos
+    # identificadores derivados (todos os cpf_hash mudam) — decisão documental
+    # antes de rotacionar.
+    identity_hash_secret: SecretStr = SecretStr("")
+
+    # TTLs e limites com os defaults sugeridos pela SPEC-002 §2, configuráveis.
+    session_ttl_minutes: int = 30
+    otp_ttl_minutes: int = 5
+    otp_max_attempts: int = 5
+
     # --- LLM (ADR-010) ---
     # O acesso em runtime sempre passa por uma abstração de provider. Nenhum
     # node instancia SDK diretamente.

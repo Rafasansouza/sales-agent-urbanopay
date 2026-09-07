@@ -28,8 +28,9 @@ anônima.
 
 Havendo divergência, o valor precisa ser recalculado antes de Quote e Order.
 
-⚠️ SPEC-002 §8 descreve `FARE_PROFILE_CHANGED` como "evento/erro semântico".
-A natureza exata está em aberto: ver A-11 em `docs/OPEN-QUESTIONS.md`.
+`FARE_PROFILE_CHANGED` é **sinal de resultado, não exceção** (A-11 resolvida):
+`ProfileResolutionResult.signal` o carrega quando declarado ≠ oficial. O
+recálculo e a invalidação de Quote pertencem às SPEC-003/004.
 
 ## Titularidade
 
@@ -102,5 +103,6 @@ expirado, máximo de tentativas, cartão `BLOCKED`, cartão `EXPIRED`, cartão d
 outro usuário, divergência de perfil nos dois sentidos, prompt injection e
 sessão expirada.
 
-⚠️ O seed sugerido em §13 não cobre cartão `EXPIRED`. Ver A-12 em
-`docs/OPEN-QUESTIONS.md`.
+A-12 resolvida: o dataset de §13 vive como **fixture de teste** (sem seed em
+migration), acrescido do cartão `EXPIRED` e do cenário cross-user que os
+testes de §14 exigem.

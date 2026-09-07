@@ -1,57 +1,53 @@
-# Cards — cartoes, perfil oficial e saldo
+# Cards — titularidade, masking e autoridade de perfil tarifário
 
-**Fronteira de dominio:** ADR-001
-**Documentos obrigatorios:** SPEC-002
-**ADRs aplicaveis:** ADR-004, ADR-005
-**Estado:** nao implementado
+**Fronteira de domínio:** ADR-001
+**Documentos obrigatórios:** SPEC-002
+**ADRs aplicáveis:** ADR-004, ADR-005, ADR-012
+**Estado:** **implementado** (SPEC-002)
 
 ## Responsabilidade
 
-Cartoes de transporte, titularidade, perfil tarifario oficial e saldo. Durante uma transacao, card.fare_profile e a fonte oficial do perfil.
+Autoridade determinística sobre o cartão: titularidade server-side, saldo
+somente leitura e o **perfil tarifário oficial** — que vem SEMPRE do cartão,
+nunca da fala do usuário (§1, §16; PRD RN-02).
 
-## Entidades previstas
+## Decisões vigentes (aprovadas no plano da SPEC-002)
 
-- `Card`
+- **Número completo do cartão não existe no sistema**: persiste-se apenas
+  `card_last4`; apresentação `****4821` (§6); identidade oficial é o UUID.
+- Ownership em **uma única query** `get_owned(customer_id, card_id)`:
+  inexistente e alheio são indistinguíveis → `CARD_NOT_ACCESSIBLE` (§5,
+  anti-enumeração). **Titularidade antes de status**, sempre.
+- Perfil oficial: somente cartão `ACTIVE` é autoridade (`CARD_NOT_ACTIVE`,
+  PRD RN-09). Leitura de saldo/detalhes do titular independe do status (§7).
+- `FARE_PROFILE_CHANGED` é **sinal de resultado, não exceção** (A-11):
+  `ProfileResolutionResult {official_profile, source=CARD, verified=true,
+  declared_profile, signal}`. Recálculo/invalidação pertencem a SPEC-003/004.
+- `FareProfile` é enum próprio (mesmos valores do fare, sem import entre
+  módulos); a fronteira com o Fare Engine é o valor string.
+- Saldo `NUMERIC(12,2)`/`Decimal`, `CHECK >= 0`; mutação/ledger = SPEC-005.
+- Sem operações de mudança de status nesta SPEC — os 4 estados são dados.
+- **`status` é a única autoridade operacional; `expires_at` é informativo.**
+  A SPEC não define regra funcional para `expires_at` (todos os comportamentos
+  referenciam status — §14.7, PRD RN-09); a materialização de `EXPIRED` a
+  partir da data é operação administrativa futura. Sem dupla autoridade
+  ambígua: mudar isso exige documento.
 
-## Tools permitidas ao Sales Agent
+## Integração com o Fare Engine
 
-- `get_customer_cards`
-- `get_card_details`
-- `get_card_balance`
+```text
+identity.require_authenticated → customer_id
+cards.resolve_official_fare_profile → ProfileResolutionResult
+composição (SPEC-004) → FareService.calculate_trip_fare(profile.value, ...)
+```
+
+`cards` não importa `fare` nem `identity`; ninguém importa `cards`.
+
+## Tools que este módulo suportará (SPEC-004)
+
+`get_customer_cards`, `get_card_details`, `get_card_balance`.
 
 ## Tools proibidas
 
-- `change_fare_profile`
-- `change_balance`
-- `set_balance`
-- `link_card`
-
-Nenhuma delas pode ser criada sob nome equivalente ou disfarcada como tool
-generica.
-
-## Invariantes e bloqueios
-
-- Titularidade validada server-side: card.customer_id == session.customer_id.
-- Cartao de terceiro responde CARD_NOT_ACCESSIBLE sem revelar existencia.
-- Numero completo do cartao nunca chega ao agente: masking ****NNNN.
-- Saldo em Decimal/NUMERIC, nunca float.
-
-## Estrutura esperada quando implementado
-
-```text
-cards/
-├── domain/          entidades, value objects, erros tipados, regras puras
-├── application/     use cases e servicos
-└── infrastructure/  repositorios e adaptadores
-```
-
-Direcao de dependencia: `domain` nao importa `application` nem
-`infrastructure`. Ver `.claude/rules/architecture.md`.
-
-## Antes de implementar
-
-1. Leia a SPEC correspondente por inteiro, nao de memoria.
-2. Leia `docs/OPEN-QUESTIONS.md` e confirme que nenhuma pendencia bloqueia a
-   tarefa.
-3. Confirme que os ADRs necessarios estao com status Aceito.
-4. Use a skill `prepare-task` antes de escrever codigo.
+`change_fare_profile`, `change_balance`, `link_card`, `set_balance` — nem sob
+nome equivalente.
