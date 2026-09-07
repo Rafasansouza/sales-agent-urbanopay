@@ -283,16 +283,18 @@ Detalhadas em [`docs/OPEN-QUESTIONS.md`](docs/OPEN-QUESTIONS.md).
 
 | ID | Bloqueio |
 |---|---|
-| C-01 | PRD §8 e SPEC-003 §14 discordam sobre a ordem entre confirmação do passageiro e aprovação humana |
-| C-02 | Não existe transição de estado que permita segunda tentativa de pagamento após rejeição |
 | A-05 | Módulo `catalog` sem SPEC — `TICKET_PURCHASE` não é implementável |
 | A-06 | `calculate_usage_cost` exposta em SPEC-004 mas não especificada |
 | A-07 | Interface administrativa de aprovação humana sem especificação |
 | A-08 | Stack do frontend sem ADR aceito |
-| A-13 | Ciclo de vida do `IdempotencyRecord` em `IN_PROGRESS` obsoleto — bloqueia SPEC-003 |
 | H-11 | Persistência das tabelas internas do LangGraph exige ADR próprio antes da SPEC-004 |
 
 Nenhuma dessas lacunas deve ser preenchida pela implementação.
+
+Há ainda duas divergências **documentais** abertas pela implementação da
+SPEC-003, que não bloqueiam comportamento: **A-14** (três erros necessários
+ausentes de SPEC-003 §16) e **A-15** (o mecanismo de idempotência do webhook é
+a unicidade do evento, não um `IdempotencyRecord`).
 
 ---
 

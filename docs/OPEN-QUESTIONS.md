@@ -3,8 +3,9 @@
 **Projeto:** UrbanoPay Mobilidade
 **Última atualização:** 2026-09-07
 **Origem:** análise documental realizada no bootstrap do repositório, atualizada
-pela aceitação do ADR-012, pela persistence foundation e pelas implementações
-das SPEC-001 e SPEC-002.
+pela aceitação do ADR-012, pela persistence foundation, pelas implementações
+das SPEC-001 e SPEC-002, e pela correção documental da state machine da
+SPEC-003 (C-01, C-02, A-03, A-09, A-10, A-13).
 
 Nota de segurança registrada (evolução futura, sem item próprio): a sessão
 mantém o mesmo ID após a autenticação (decisão aprovada para o MVP); rotação
@@ -37,71 +38,77 @@ Regras de uso:
 
 ---
 
-## 🔴 C-01 — Ordem entre confirmação do passageiro e aprovação humana
+## ✅ C-01 — Ordem entre confirmação do passageiro e aprovação humana
 
-**Bloqueia:** SPEC-003, SPEC-004
-**Fontes em conflito:** PRD §8 vs SPEC-003 §14
-
-PRD §8 ordena: passo 14 cria `Order` em `DRAFT`, passo 15 obtém a **confirmação
-explícita do passageiro**, passo 16 exige **aprovação humana** para recarga
-acima de R$ 200,00.
-
-SPEC-003 §14 define a ordem inversa:
+**Resolvido em 2026-09-07.** A confirmação explícita do cliente **precede** a
+aprovação humana. `SPEC-003 §14` foi corrigida e passou a ser a máquina de
+estados oficial:
 
 ```text
-DRAFT → REQUIRES_APPROVAL → APPROVED → CONFIRMED → PAYMENT_PENDING
+sem aprovação:  DRAFT →(confirma)→ CONFIRMED → PAYMENT_PENDING
+com aprovação:  DRAFT →(confirma)→ REQUIRES_APPROVAL →(Approval APPROVED)→ CONFIRMED → PAYMENT_PENDING
 ```
 
-Ou seja, a aprovação administrativa ocorre **antes** da confirmação do
-passageiro.
+`CONFIRMED` passa a significar: *todas as confirmações necessárias foram
+satisfeitas e o Order está elegível para criação de Payment* — é o único
+estado pagável.
 
-**O que precisa ser decidido:** para uma recarga acima de R$ 200,00, a
-confirmação do passageiro ocorre antes ou depois da aprovação operacional.
+**Fundamentos:** hierarquia documental (PRD §8, passos 15 e 16, prevalece sobre
+o diagrama da SPEC); aprovação humana só opera sobre intenção comercial
+explícita; preserva `create_payment` exigindo `CONFIRMED` (§9) com um único
+estado pagável; e o disparador de `DRAFT → REQUIRES_APPROVAL` é um comando que
+já existe no conjunto de tools de SPEC-004 §7 (`confirm_order`) — na ordem
+inversa, nenhuma tool disparava essa transição.
 
-**Impacto:** define a máquina de estados de `Order`, o comportamento de
-`confirm_order`, o ponto de aplicação de `ApprovalPolicy` e o cumprimento de
-RF-12.
-
----
-
-## 🔴 C-02 — Retentativa de pagamento sem transição de estado definida
-
-**Bloqueia:** SPEC-003
-**Fontes:** SPEC-003 §9 vs SPEC-003 §13 e §14
-
-SPEC-003 §9 exige `Order CONFIRMED` para criar um `Payment`. SPEC-003 §13
-permite que um Order tenha `1..N` Payments e determina que uma nova tentativa
-após rejeição use novo `payment_id` e nova idempotency key.
-
-Porém, ao criar o primeiro Payment o Order passa a `PAYMENT_PENDING`, e §14
-**não define nenhuma transição de volta a `CONFIRMED`**. Lido literalmente, todo
-segundo pagamento é rejeitado com `INVALID_ORDER_STATE`.
-
-**O que precisa ser decidido:** existe transição
-`PAYMENT_PENDING → CONFIRMED` quando o Payment termina em
-`REJECTED`/`EXPIRED`/`FAILED`, ou a criação de Payment passa a ser permitida em
-`PAYMENT_PENDING` desde que não exista Payment `APPROVED`.
-
-**Impacto:** sem isso a jornada "pagamento rejeitado e nova tentativa" —
-exigida nos testes de SPEC-003 §17 — é inalcançável.
+**Documentos corrigidos:** SPEC-003 §7, §8, §14; PRD §12.
 
 ---
 
-## 🟠 A-03 — Estados de Order sem transições declaradas
+## ✅ C-02 — Retentativa de pagamento
 
-**Bloqueia:** SPEC-003
-**Fonte:** SPEC-003 §6 vs §14
+**Resolvido em 2026-09-07**, com dois casos explicitamente distintos (SPEC-003
+§13.1 e §13.2, derivados de ADR-007):
 
-O enum de §6 inclui `FAILED`, `CANCELLED` e `EXPIRED`. No diagrama de §14,
-`FAILED` **não possui nenhuma aresta de entrada**, e `CANCELLED`/`EXPIRED` só
-são alcançáveis a partir de `DRAFT`.
+**Retry técnico** (timeout ou resultado externo desconhecido): mesmo
+`payment_id`, mesma idempotency key, nenhum Payment novo, consulta ao provider
+antes de qualquer novo POST — nunca retry cego.
 
-**O que precisa ser decidido:**
+**Nova tentativa comercial** (Payment terminou em `REJECTED`, `EXPIRED`,
+`CANCELLED` ou `FAILED`): o Order executa `PAYMENT_PENDING → CONFIRMED`
+(transição acrescentada a §14) e, a partir dali, um Payment novo pode ser
+criado com novo `payment_id` e nova key.
 
-- Para qual estado vai o Order quando o Pix expira em `PAYMENT_PENDING`?
-- `CONFIRMED` e `PAYMENT_PENDING` podem ser cancelados pelo passageiro?
-- Quando `FAILED` é alcançado, e como ele se distingue de
-  `FULFILLMENT_FAILED`?
+**Modelo:** apenas `Payment` — cada Payment **é** uma tentativa comercial
+(§13). Não existe `PaymentAttempt`.
+
+A opção escolhida preserva §9 literalmente (`create_payment` exige
+`CONFIRMED`) e mantém o invariante "`PAYMENT_PENDING` ⟺ existe exatamente uma
+tentativa ativa", protegido por índice único parcial.
+
+---
+
+## ✅ A-03 — Estados de Order sem transições declaradas
+
+**Resolvido em 2026-09-07**, junto com C-01 e C-02. As três perguntas
+originais foram respondidas na correção de SPEC-003 §14:
+
+- **Pix expirado em `PAYMENT_PENDING`** ⇒ o Order volta a `CONFIRMED` (§13.2),
+  habilitando nova tentativa. O Order não é encerrado por expiração de Payment.
+- **Cancelamento pelo cliente** ⇒ permitido **somente em `DRAFT`**. Por
+  ausência de contrato seguro, `REQUIRES_APPROVAL`, `CONFIRMED`,
+  `PAYMENT_PENDING` e `PAID` não admitem cancelamento pelo cliente no MVP.
+  `REQUIRES_APPROVAL → CANCELLED` ocorre exclusivamente por `Approval
+  REJECTED`, com motivo registrado como decorrente da rejeição — nunca
+  apresentado como pedido do cliente.
+- **`FAILED`** ⇒ **removido do enum do Order**. Nenhuma SPEC lhe dava caminho
+  de entrada: falha de pagamento devolve o Order a `CONFIRMED`, falha de
+  entrega usa `FULFILLMENT_FAILED` (SPEC-005), e encerramento usa `CANCELLED`
+  ou `EXPIRED`. Estado persistido sem caminho válido de entrada não é
+  mantido. `Payment.FAILED` continua existindo e é coisa distinta.
+
+O único item de A-03 que **permanece aberto** está agora sob A-07: o Order
+`EXPIRED` só é alcançável a partir de `DRAFT` (§5.1), e a política temporal
+pós-confirmação foi deliberadamente deixada sem TTL nesta versão — ver A-10.
 
 ---
 
@@ -183,6 +190,13 @@ de ADR-001 (`apps/api` e `apps/web` apenas).
 autenticado, tela administrativa, aplicação separada), com qual modelo de
 autorização e qual trilha de auditoria.
 
+**Estado em 2026-09-07:** a **modelagem de domínio** da aprovação foi resolvida
+com C-01 (SPEC-003 §7, §14): estados, transições, efeitos no Order e campos de
+auditoria estão definidos, e os serviços de aplicação de aprovação e rejeição
+existem. O que permanece aberto é exclusivamente a **superfície** por onde um
+humano decide — sem ela, um Order em `REQUIRES_APPROVAL` só avança por chamada
+direta ao serviço (o que os testes fazem).
+
 ---
 
 ## 🟠 A-08 — Stack do frontend sem ADR
@@ -199,32 +213,41 @@ for aceito, `apps/web/` contém apenas documentação.
 
 ---
 
-## 🟡 A-09 — Colisão do nome `APPROVED` em três enums
+## ✅ A-09 — Colisão do nome `APPROVED` em três enums
 
-**Afeta:** SPEC-003, observabilidade
-**Fontes:** PRD §12, SPEC-003 §6 e §7, ADR-007
+**Resolvido em 2026-09-07 por eliminação**, não por renomeação:
+`Order.APPROVED` foi **removido** do enum (SPEC-003 §6, PRD §12). Com C-01
+resolvido, a aprovação humana leva o Order direto a `CONFIRMED`, e o estado
+administrativo não precisa ser duplicado no Order.
 
-`Order.status = APPROVED` (aprovação administrativa), `Approval.status =
-APPROVED` e `Payment.status = APPROVED` coexistem. PRD §12 e SPEC-003 §6 já
-determinam enums separados, portanto não há conflito documental — mas o risco de
-confusão em código, em log e em trace é alto.
+Restam dois `APPROVED`, semanticamente distintos e em enums separados:
 
-**Encaminhamento:** regra de nomenclatura registrada em
-`.claude/rules/backend/orders-payments.md`. Vale considerar renomear o estado
-administrativo do Order (por exemplo `APPROVAL_GRANTED`) via ADR.
+- `Approval.status = APPROVED` — decisão humana registrada;
+- `Payment.status = APPROVED` — pagamento confirmado pelo provider.
+
+Em log e em trace, o status permanece sempre qualificado
+(`approval.status=APPROVED`, `payment.status=APPROVED`), conforme
+`.claude/rules/backend/orders-payments.md`.
 
 ---
 
-## 🟡 A-10 — TTL de Order indefinido
+## ✅ A-10 — TTL de Order, com escopo explícito de MVP `RECHARGE`
 
-**Afeta:** SPEC-003
-**Fontes:** SPEC-003 §4, PRD §19
+**Resolvido em 2026-09-07** (SPEC-003 §5.1):
 
-SPEC-003 §4 sugere TTL inicial de 10 minutos para `Quote`. Existem o estado
-`Order EXPIRED` e o erro `ORDER_EXPIRED`, mas nenhum TTL de Order é definido.
+- Order em `DRAFT` possui TTL configurável, **default 10 minutos**;
+- a expiração se aplica **somente enquanto `DRAFT`**: expirado ⇒ `EXPIRED`, e
+  não pode ser confirmado (`ORDER_EXPIRED`);
+- **após a confirmação explícita não há TTL automático** nesta versão: os
+  valores estão congelados, `REQUIRES_APPROVAL` pode aguardar decisão humana e
+  `CONFIRMED` pode aguardar a criação do Payment pelo tempo necessário.
 
-Coerente com PRD §19, que mantém "TTL definitivo de Quote/Order" como
-pendência. Nenhum valor foi adotado no `.env.example`.
+Quote mantém TTL próprio, também com default de 10 minutos e validade derivada
+de `expires_at` (sem coluna de status).
+
+**Limitação registrada:** esta política vale para `RECHARGE` no MVP. Quando
+`TICKET_PURCHASE` for implementado (após A-05), a política temporal deve ser
+revisitada, porque preço e produto podem exigir validade diferente.
 
 ---
 
@@ -258,6 +281,59 @@ cenário cross-user que os testes de §14 exigem e o seed sugerido não cobria.
 
 Um seed demonstrativo oficial reproduzível poderá ser criado quando existir a
 jornada E2E real (SPEC-004) — decisão adiada, não esquecida.
+
+---
+
+## 🟡 A-14 — Três erros necessários não listados em SPEC-003 §16
+
+**Aberto — descoberto em 2026-09-07, na implementação da SPEC-003.**
+
+A implementação precisou de três recusas determinísticas para as quais a
+§16 não nomeia código. Nenhum código novo foi inventado por conta própria: dois
+casos **reutilizam** um código já documentado, e apenas um introduz nome novo,
+por não haver reuso honesto possível.
+
+| Situação | Tratamento adotado | Código |
+|---|---|---|
+| `operation_type = TICKET_PURCHASE` (fora do escopo do MVP, §1.1) | recusa explícita; comportamento fictício para produto sem SPEC seria pior | `UNSUPPORTED_OPERATION_TYPE` (**novo**) |
+| Valor de recarga inválido — não positivo, mais de duas casas, ou além de `Numeric(12,2)` | validação determinística; nunca arredonda em silêncio | `INVALID_RECHARGE_AMOUNT` (**novo**) |
+| Segunda tentativa de Order sobre a mesma Quote (§4) | reuso de código documentado | `INVALID_ORDER_STATE` |
+
+Os dois códigos novos são de **validação de entrada**, não de estado
+financeiro, e nenhum deles altera a máquina de estados. A pendência é
+documental: a §16 deve ratificá-los ou indicar o código preferido.
+
+**Impacto se não resolvido:** nenhum comportamento fica bloqueado; o risco é o
+contrato HTTP expor um `error.code` que a SPEC não declara.
+
+**Quem decide:** produto, ao revisar SPEC-003 §16.
+
+---
+
+## 🟡 A-15 — Idempotência do webhook: mecanismo divergente da §11
+
+**Aberto — descoberto em 2026-09-07, na implementação da SPEC-003.**
+
+A §11 lista `process_payment_webhook` entre as operações que exigem
+idempotência, o que sugere um `IdempotencyRecord` como as demais. A
+implementação **não** cria esse registro: a idempotência do webhook é a
+unicidade `(provider, provider_event_id)` de `payment_events`, garantida por
+constraint de banco com `ON CONFLICT DO NOTHING`.
+
+Razão: o webhook não tem key escolhida pelo cliente. Seu identificador natural
+é o do próprio evento, e manter dois mecanismos de deduplicação para o mesmo
+fato criaria duas verdades a sincronizar — a coerência entre elas passaria a
+ser mais um invariante a defender, sem ganho.
+
+O efeito exigido pela SPEC é entregue: **webhook duplicado nunca produz efeito
+duplicado**, com teste unit e de integração. A pendência é de redação: a §11
+deve reconhecer o mecanismo, ou exigir explicitamente o registro adicional.
+
+**Impacto se não resolvido:** nenhum, funcionalmente. É divergência entre o
+texto da SPEC e o mecanismo implementado, e por isso está registrada em vez de
+silenciada.
+
+**Quem decide:** produto/arquitetura, ao revisar SPEC-003 §11.
 
 ---
 
@@ -363,32 +439,38 @@ pode ser introduzido.
 
 **Encaminhamento:** exige ADR próprio, **antes** da implementação da SPEC-004.
 
-### 🟠 A-13 — Ciclo de vida de `IdempotencyRecord` em `IN_PROGRESS`
+### ✅ A-13 — Ciclo de vida de `IdempotencyRecord` em `IN_PROGRESS`
 
-**Bloqueia:** SPEC-003
-**Fonte:** SPEC-003 §11
+**Resolvido em 2026-09-07** (SPEC-003 §11.1–§11.3). A chave da solução é que
+`IN_PROGRESS` observável existe **apenas** para operações com efeito externo:
 
-SPEC-003 §11 define `IdempotencyRecord` com um campo `status`, o que sugere um
-ciclo de vida em duas fases — reivindicar a chave, depois concluir a operação.
-Esse desenho é o que permite que duas requisições concorrentes com a mesma
-chave não produzam efeito duplicado.
+- **Operações locais** (`create_order`, `confirm_order`, `approve_order`,
+  `reject_order`, processamento local de `PaymentEvent`) usam **uma única
+  transação**: reivindicar a key, aplicar o efeito e marcar `COMPLETED` comitam
+  juntos. Se a transação falha, registro e efeito falham juntos — **não existe
+  `IN_PROGRESS` órfão observável**.
+- **`create_payment`** usa **duas fases**, porque nenhuma transação de banco
+  pode permanecer aberta durante a chamada HTTP ao provider. Um crash entre as
+  fases deixa `Payment CREATED` + `Idempotency IN_PROGRESS` — estado
+  **recuperável**, não órfão: a idempotency key é determinística e a
+  reconciliação consulta o provider por ela.
 
-Porém a SPEC **não define o comportamento para um registro obsoleto**: se um
-processo reivindica a chave e morre antes de concluir, o registro fica em
-`IN_PROGRESS` indefinidamente.
+Semântica dos status:
 
-**O que precisa ser decidido:**
+- `IN_PROGRESS` — key reivindicada, operação não concluída;
+- `COMPLETED` — operação executada e **resultado conhecido**, inclusive quando
+  o Payment resultante terminou em estado não aprovado;
+- `FAILED` — falha **determinística da própria operação**, reproduzida em
+  replay. `Payment.REJECTED` **não** é `Idempotency.FAILED`.
 
-- um registro `IN_PROGRESS` expira? Após quanto tempo?
-- pode ser reivindicado por outra requisição, ou exige intervenção?
-- qual a política de retenção de registros concluídos?
+**Sem apropriação automática por tempo.** Encontrar a mesma key em
+`IN_PROGRESS` não emite novo POST: retorna `PAYMENT_STATUS_UNKNOWN` e aciona
+reconciliação. Um `stale_after` configurável pode existir apenas como gatilho
+para **consultar** o provider — o tempo autoriza reconciliação, nunca cobrança.
 
-**Impacto:** sem essa definição, uma falha de processo no meio de
-`create_payment` pode bloquear permanentemente novas tentativas para aquela
-chave, ou — na interpretação oposta — permitir efeito duplicado.
-
-A decisão pertence à definição de Orders e Payments e deve ser resolvida
-**antes** da SPEC-003, não dentro do ADR-012.
+Escopo `(operation, key)`; payload divergente ⇒ `IDEMPOTENCY_CONFLICT`.
+Retenção: registros concluídos **não são removidos** no MVP — são trilha de
+auditoria, não cache.
 
 ### 🟡 H-07 — Tolerância ao código de saída 5 do pytest
 

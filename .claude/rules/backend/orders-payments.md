@@ -5,6 +5,8 @@ paths:
   - "apps/api/src/urbanopay/modules/payments/**"
   - "apps/api/src/urbanopay/modules/approvals/**"
   - "apps/api/src/urbanopay/providers/payments/**"
+  - "apps/api/src/urbanopay/core/idempotency.py"
+  - "apps/api/src/urbanopay/db/idempotency.py"
   - "tests/**/orders/**"
   - "tests/**/payments/**"
   - "tests/**/approvals/**"
@@ -21,94 +23,136 @@ Leia a SPEC-003 antes de qualquer alteração nestes módulos.
 ## Princípio
 
 A conversa representa **intenção**; o backend representa **estado**. Dizer
-"paguei" nunca altera status financeiro.
+"paguei" nunca altera status financeiro — não é evento de domínio.
+
+## State machine oficial do Order (SPEC-003 §14)
+
+A confirmação explícita do cliente **precede** a aprovação humana.
+`CONFIRMED` é o **único** estado pagável e significa: todas as confirmações
+necessárias foram satisfeitas.
+
+```text
+DRAFT ─┬─> CANCELLED                (cancelamento pelo cliente — só em DRAFT)
+       ├─> EXPIRED                  (TTL de DRAFT: default 10 min)
+       ├─> CONFIRMED                (confirma; requires_approval = false)
+       └─> REQUIRES_APPROVAL        (confirma; requires_approval = true)
+              ├─> CANCELLED         (Approval REJECTED)
+              └─> CONFIRMED         (Approval APPROVED)
+
+CONFIRMED         ──> PAYMENT_PENDING          (create_payment)
+PAYMENT_PENDING ─┬──> PAID                     (Payment APPROVED)
+                 └──> CONFIRMED                (Payment terminal não aprovado)
+PAID              ──> FULFILLING               (SPEC-005)
+```
+
+**Não existe `Order.APPROVED`** e **não existe `Order.FAILED`** — ambos foram
+removidos do enum por não possuírem caminho de entrada. A aprovação é
+`Approval.status = APPROVED`; o pagamento aprovado é
+`Payment.status = APPROVED`.
+
+Estados do Order: `DRAFT`, `REQUIRES_APPROVAL`, `CONFIRMED`,
+`PAYMENT_PENDING`, `PAID`, `FULFILLING`, `COMPLETED`, `FULFILLMENT_FAILED`,
+`CANCELLED`, `EXPIRED`. Transição inválida ⇒ `INVALID_ORDER_STATE_TRANSITION`.
+
+Cancelamento pelo cliente: **somente em `DRAFT`**. `REQUIRES_APPROVAL →
+CANCELLED` ocorre apenas por rejeição de aprovação, com motivo registrado como
+tal — nunca apresentado como pedido do cliente. `PAID` é terminal; reembolso
+está fora do escopo.
+
+## Escopo do MVP
+
+Somente `operation_type = RECHARGE`. `TICKET_PURCHASE` está bloqueado por A-05
+(catálogo sem SPEC) — não implemente comportamento fictício para produtos sem
+especificação.
+
+Para RECHARGE: valor escolhido pelo cliente, `subtotal == total`,
+`discount_amount == 0`, `currency = BRL`. O Fare Engine **não** calcula o valor
+da recarga; `fare_profile` é snapshot de auditoria.
 
 ## Invariantes financeiras
 
 - Somente o provider ou o backend estabelece `PaymentStatus.APPROVED`.
 - Somente `PaymentStatus.APPROVED` permite `Order PAID`.
-- Um Order pode ter `1..N` Payments, mas **no máximo um `APPROVED`**. Proteja
-  isso também com transação e constraint de banco, não apenas com código.
-- `payment.amount == order.total`, sempre derivado server-side.
-- Após confirmação, os valores do Order são **imutáveis**. Alteração exige
-  cancelar e criar nova Quote e novo Order.
-- Timeout na criação de pagamento é **estado desconhecido**, não falha
-  definitiva. Nunca faça retry cego.
-- Falha de fulfillment após pagamento aprovado **nunca** gera nova cobrança.
+- Um Order pode ter `1..N` Payments, **no máximo um `APPROVED`** e **no máximo
+  uma tentativa ativa** (`CREATED`/`PENDING`). Ambos protegidos por índice
+  único parcial, além da verificação em código.
+- `payment.amount == order.total`, derivado server-side. Não é expressável como
+  `CHECK` entre tabelas: garanta no serviço de aplicação **e** em teste.
+- `Order PAID ⇔ existe Payment APPROVED`: mesma observação — aplicação + teste.
+- Após confirmação, os valores do Order são **imutáveis**.
+- Falha de fulfillment após pagamento **nunca** gera nova cobrança.
+
+## Payment: estados e retentativa
+
+Sete estados, apenas (SPEC-003 §9): `CREATED`, `PENDING`, `APPROVED`,
+`REJECTED`, `CANCELLED`, `EXPIRED`, `FAILED`. **Não crie `UNKNOWN`.**
+
+- `CREATED` = tentativa local existe, estado externo ainda não confirmado.
+- `PENDING` = provider confirmou a cobrança.
+- Terminais **não regridem**.
+
+**Retry técnico** (timeout/inconclusivo): mesmo `payment_id`, mesma key,
+nenhum Payment novo, **lookup antes de qualquer novo POST**. Nunca retry cego.
+
+**Nova tentativa comercial** (terminal não aprovado): Order volta a
+`CONFIRMED`; então novo `payment_id` e nova key.
+
+**Estado externo desconhecido:** `Payment CREATED` + `Order PAYMENT_PENDING` +
+`Idempotency IN_PROGRESS`, retornando `PAYMENT_STATUS_UNKNOWN`. Nenhuma nova
+tentativa comercial até reconciliar.
 
 ## Idempotência
 
 Obrigatória em `create_order`, `confirm_order`, `approve_order`,
-`create_payment` e `process_payment_webhook`.
+`create_payment` e `process_payment_webhook`. Escopo `(operation, key)`;
+payload divergente ⇒ `IDEMPOTENCY_CONFLICT`. Registros vivem no PostgreSQL,
+nunca no Redis (ADR-009).
 
-- `IdempotencyRecord` guarda key, operation, resource_id, request_hash, status,
-  response_reference e timestamps.
-- Registros de idempotência financeira vivem no PostgreSQL, nunca no Redis.
-- Retry da mesma tentativa reutiliza a mesma key.
-- Nova tentativa após rejeição usa novo `payment_id` e nova key.
-- Webhook duplicado nunca produz efeito duplicado.
+- **Operações locais:** uma única transação — claim, efeito e `COMPLETED`
+  comitam juntos. Não existe `IN_PROGRESS` órfão.
+- **`create_payment`:** duas fases. Nenhuma transação de banco permanece
+  aberta durante a chamada ao provider.
+- **`COMPLETED`** = operação executada e resultado conhecido, **inclusive**
+  quando o Payment terminou não aprovado. `FAILED` é falha determinística da
+  própria operação. `Payment.REJECTED` ≠ `Idempotency.FAILED`.
+- **Nunca** apropriação de key por tempo. `stale_after` só aciona consulta ao
+  provider: o tempo autoriza reconciliação, nunca cobrança.
 
 ## Aprovação humana
 
-Regra vigente: `RECHARGE > R$ 200,00` exige aprovação.
+`RECHARGE` com `order.total > R$ 200,00` (estritamente maior; 200,00 exatos
+**não** exigem aprovação). A política fica encapsulada em `ApprovalPolicy` —
+nunca espalhada em `if`, nunca com o valor literal fora dela.
 
-A política fica encapsulada em `ApprovalPolicy`. **Nunca** espalhe o limite em
-`if` pela aplicação, e nunca escreva o valor literal fora da policy.
+`Approval.status`: `PENDING → APPROVED | REJECTED`. Terminais não voltam a
+`PENDING`. Sem TTL e sem estado `CANCELLED` no MVP. Toda decisão registra ator
+e instante.
 
-`Approval.status`: `PENDING`, `APPROVED`, `REJECTED`. O Sales Agent pode
-consultar o status, nunca aprovar ou rejeitar.
+O Sales Agent consulta o status; **nunca** aprova nem rejeita.
 
-⚠️ A interface administrativa de aprovação não está especificada. Ver A-07 em
-`docs/OPEN-QUESTIONS.md`.
+⚠️ A superfície administrativa de decisão permanece aberta (A-07).
 
-## Confirmação explícita
+## Webhook e PaymentEvent
 
-Antes do pagamento, apresente operação, cartão mascarado, perfil, valor,
-desconto, total e meio de pagamento.
+A entidade se chama **`PaymentEvent`**, como nomeiam a SPEC-003 §3 e §11.2 —
+não `ProviderEvent`.
 
-`ConfirmationResult`: `CONFIRMED`, `REJECTED`, `AMBIGUOUS`.
-**Mensagem ambígua nunca dispara pagamento.**
+`UNIQUE (provider, provider_event_id)` + `ON CONFLICT DO NOTHING`: webhook
+duplicado ⇒ efeito único. Webhook e polling convergem no **mesmo** aplicador de
+estado, ambos sob lock do Payment, com regras monotônicas. Evento fora de ordem
+nunca faz estado terminal regredir; em caso de dúvida, **consulte o provider**.
 
-## Nomenclatura de enums
+Persista apenas payload minimizado/redigido. **Nunca** token, secret,
+credencial ou PII desnecessária.
 
-`APPROVED` existe em três enums distintos: `Order.status` (aprovação
-administrativa), `Approval.status` e `Payment.status`.
+O webhook entra direto no `PaymentService` — nunca no grafo do agente, nunca no
+LLM.
 
-Regras para evitar confusão:
+## Concorrência
 
-- os três enums são tipos **separados**, nunca strings soltas;
-- nunca compare status entre enums diferentes;
-- em log e em trace, sempre qualifique: `order.status=APPROVED`,
-  `payment.status=APPROVED`;
-- ver A-09 em `docs/OPEN-QUESTIONS.md` para a discussão de renomeação.
-
-## Máquina de estados
-
-A referência é SPEC-003 §14. Transição inválida retorna
-`INVALID_ORDER_STATE_TRANSITION`.
-
-⚠️ Duas lacunas bloqueiam a implementação deste módulo:
-
-- **C-01**: PRD §8 e SPEC-003 §14 discordam sobre a ordem entre confirmação do
-  passageiro e aprovação humana.
-- **C-02**: não existe transição definida que permita uma segunda tentativa de
-  pagamento após rejeição.
-
-Ambas estão em `docs/OPEN-QUESTIONS.md` e precisam de decisão documental antes
-da implementação. Não escolha silenciosamente uma das interpretações.
-
-## Provider de pagamento
-
-Fonte: ADR-007.
-
-- Encapsulado por `PaymentProvider` / `MercadoPagoPaymentProvider`.
-- Somente credenciais de teste; access token só no backend.
-- `X-Idempotency-Key` em toda criação.
-- Webhook valida origem e assinatura quando aplicável, persiste o evento,
-  deduplica e só então atualiza Payment e Order.
-- Webhook entra direto no `PaymentService`, nunca no grafo do agente e nunca no
-  LLM.
-- `FakePaymentProvider` em testes locais e em CI.
+**Ordem global de lock: `Order` → `Approval` → `Payment`.** Toda transação que
+toque mais de um desses agregados respeita essa ordem. Isolamento
+`READ COMMITTED` (ADR-012) — não altere.
 
 ## Tools proibidas
 

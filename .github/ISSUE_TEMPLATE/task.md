@@ -46,15 +46,11 @@ discussão antes.
 <!--
 Consulte docs/OPEN-QUESTIONS.md. Bloqueios conhecidos hoje:
 
-- C-01 — ordem entre confirmação do passageiro e aprovação humana
-- C-02 — retentativa de pagamento sem transição definida
-- A-05 — módulo catalog sem SPEC
+- A-05 — módulo catalog sem SPEC (bloqueia TICKET_PURCHASE)
 - A-06 — calculate_usage_cost sem especificação
 - A-07 — interface de aprovação humana sem especificação
 - A-08 — stack do frontend sem ADR (ADR-011 Proposta)
-- A-13 — ciclo de vida do IdempotencyRecord em IN_PROGRESS obsoleto
 - H-11 — persistência do LangGraph exige ADR próprio antes da SPEC-004
-- persistência decidida (ADR-012 Aceito), porém ainda não implementada
 -->
 
 ## Fora de escopo
