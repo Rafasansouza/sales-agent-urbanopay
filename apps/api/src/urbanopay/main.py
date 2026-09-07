@@ -30,7 +30,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Ciclo de vida da aplicação.
 
     Nesta fase não há pool de conexão nem cliente de provider para inicializar:
-    a camada de persistência aguarda a aceitação do ADR-012.
+    a persistência decidida em ADR-012 ainda não foi implementada.
     """
     settings: Settings = get_settings()
     configure_logging(settings.log_level)

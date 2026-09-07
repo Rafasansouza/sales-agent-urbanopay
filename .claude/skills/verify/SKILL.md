@@ -83,7 +83,9 @@ Nesta fase do bootstrap:
   ("nenhum teste coletado") e emitem aviso. Qualquer outro código reprova. A
   tolerância deve ser removida quando a camada tiver testes — ver H-07 em
   `docs/OPEN-QUESTIONS.md`.
-- `migrate` falha deliberadamente: ADR-012 está com status `Proposta`.
+- `migrate` falha deliberadamente: ADR-012 está **Aceito** (Alembic é a
+  ferramenta decidida), mas a persistência ainda não foi implementada — o
+  Alembic não foi instalado e nenhuma migration foi materializada.
 
 ## Depois de verificar
 

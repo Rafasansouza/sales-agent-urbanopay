@@ -80,7 +80,7 @@ silenciosamente.
 | [009](docs/adr/ADR-009-redis.md) | Redis restrito a estado efêmero | Aceito |
 | [010](docs/adr/ADR-010-llm-strategy.md) | Estratégia de LLM e abstração de provider | Aceito |
 | [011](docs/adr/ADR-011-web-frontend-stack.md) | Stack do frontend web | **Proposta** |
-| [012](docs/adr/ADR-012-persistence-orm-migrations.md) | Persistência, ORM e migrations | **Proposta** |
+| [012](docs/adr/ADR-012-persistence-orm-migrations.md) | Persistência, ORM e migrations | Aceito |
 | [013](docs/adr/ADR-013-python-toolchain.md) | Toolchain Python | Aceito |
 
 ---
@@ -124,6 +124,7 @@ Prompt é orientação, nunca segurança.
 | Backend | Python 3.13 + FastAPI + Pydantic | ADR-006, ADR-013 |
 | Runtime do agente | LangGraph | ADR-002 |
 | Source of truth | PostgreSQL + pgvector | ADR-004 |
+| Persistência | SQLAlchemy 2.x + psycopg 3 + Alembic (decidido; não implementado) | ADR-012 |
 | Estado efêmero | Redis | ADR-009 |
 | Pagamento | Mercado Pago sandbox, Pix | ADR-007 |
 | Observabilidade | OpenTelemetry + Langfuse | ADR-008 |
@@ -206,7 +207,7 @@ Documentação interativa: `http://127.0.0.1:8000/docs` (apenas com
 | `lint` / `typecheck` | Lint e tipos |
 | `test-unit` / `test-integration` / `test-e2e` / `evals` | Camadas de teste |
 | `verify` | `fmt-check` + `lint` + `typecheck` + `test-unit` |
-| `migrate` | Indisponível até ADR-012 ser aceito |
+| `migrate` | Indisponível: a persistência decidida em ADR-012 ainda não foi implementada |
 | `clean` | Remove caches |
 
 O `Makefile` é a definição canônica e é o que a CI executa. `scripts/dev.ps1`
@@ -289,7 +290,8 @@ Detalhadas em [`docs/OPEN-QUESTIONS.md`](docs/OPEN-QUESTIONS.md).
 | A-06 | `calculate_usage_cost` exposta em SPEC-004 mas não especificada |
 | A-07 | Interface administrativa de aprovação humana sem especificação |
 | A-08 | Stack do frontend sem ADR aceito |
-| ADR-012 | Persistência com status `Proposta` — SPEC-001 depende dela |
+| A-13 | Ciclo de vida do `IdempotencyRecord` em `IN_PROGRESS` obsoleto — bloqueia SPEC-003 |
+| H-11 | Persistência das tabelas internas do LangGraph exige ADR próprio antes da SPEC-004 |
 
 Nenhuma dessas lacunas deve ser preenchida pela implementação.
 

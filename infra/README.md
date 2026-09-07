@@ -49,8 +49,9 @@ e cria somente extensões:
 - `btree_gist` — necessário para constraints de exclusão que garantam
   invariantes financeiras.
 
-Nenhuma tabela e nenhum seed. O esquema pertence a migrations versionadas, e a
-ferramenta de migrations aguarda a aceitação do ADR-012.
+Nenhuma tabela e nenhum seed. O esquema pertence a migrations versionadas com
+Alembic (ADR-012, aceito), que ainda não foram materializadas — a implementação
+da persistência é tarefa futura.
 
 ## Papel de cada serviço
 

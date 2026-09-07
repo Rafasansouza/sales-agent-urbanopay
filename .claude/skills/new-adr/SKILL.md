@@ -45,7 +45,7 @@ Leia os ADRs vigentes antes de escrever um novo:
 | 009 | Redis restrito a estado efêmero | Aceito |
 | 010 | Estratégia de LLM e abstração de provider | Aceito |
 | 011 | Stack do frontend web | **Proposta** |
-| 012 | Persistência, ORM e migrations | **Proposta** |
+| 012 | Persistência, ORM e migrations | Aceito |
 | 013 | Toolchain Python | Aceito |
 
 Se a decisão contraria um ADR aceito, o novo ADR precisa **substituí-lo

@@ -94,9 +94,10 @@ verify: fmt-check lint typecheck test-unit ## Suíte usada por /verify e pela CI
 
 # --- Banco de dados ----------------------------------------------------------
 
-migrate: ## Aplica migrations (indisponível até ADR-012 ser aceito)
-	@echo "ERRO: nenhuma ferramenta de migration foi definida ainda."
-	@echo "ADR-012 (persistencia/ORM/migrations) esta com status Proposta."
+migrate: ## Aplica migrations (persistência ainda não implementada)
+	@echo "ERRO: Alembic ainda nao foi instalado."
+	@echo "ADR-012 esta Aceito (SQLAlchemy 2.x + psycopg 3 + Alembic), mas a"
+	@echo "infraestrutura de persistencia ainda nao foi implementada nesta fase."
 	@echo "Ver docs/adr/ADR-012-persistence-orm-migrations.md"
 	@exit 1
 

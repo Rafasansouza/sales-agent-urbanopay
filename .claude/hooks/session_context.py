@@ -89,8 +89,10 @@ def build_context() -> str:
             "### Lembretes desta fase",
             "",
             "- SPEC-001 a SPEC-005 **não** estão implementadas.",
-            "- ADR-011 (frontend) e ADR-012 (persistência) estão como **Proposta**: "
-            "nada pode se apoiar neles.",
+            "- ADR-011 (frontend) está como **Proposta**: nada pode se apoiar nele.",
+            "- ADR-012 (persistência) está **Aceito** — SQLAlchemy 2.x, psycopg 3, "
+            "Alembic, Repository, Unit of Work —, mas a implementação ainda não "
+            "existe: dependências não instaladas, migrations não materializadas.",
             "- Não invente regra de negócio para preencher lacuna documental. Reporte a lacuna.",
             "- Divergência entre código, PRD, SPEC e ADR deve ser reportada, "
             "não resolvida silenciosamente.",
