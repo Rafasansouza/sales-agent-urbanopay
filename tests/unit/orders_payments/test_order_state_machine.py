@@ -94,12 +94,19 @@ def test_todo_estado_tem_caminho_valido_de_entrada() -> None:
 def test_estados_terminais_sao_os_esperados() -> None:
     assert {
         OrderStatus.COMPLETED,
-        OrderStatus.FULFILLMENT_FAILED,
         OrderStatus.CANCELLED,
         OrderStatus.EXPIRED,
     } == TERMINAL_STATUSES
     # PAID não é terminal: segue para fulfillment (SPEC-005).
     assert OrderStatus.PAID not in TERMINAL_STATUSES
+    # `FULFILLMENT_FAILED` deixou de ser terminal na implementação da SPEC-005
+    # (§5.1): admite reentrada por comando explícito, para que um Order pago
+    # cujo cartão foi reativado possa ser concluído. Continua sem qualquer
+    # outra saída — em especial, não volta a `PAID` nem a `CONFIRMED`, o que
+    # impediria nova cobrança.
+    assert ALLOWED_TRANSITIONS[OrderStatus.FULFILLMENT_FAILED] == frozenset(
+        {OrderStatus.FULFILLING}
+    )
 
 
 @pytest.mark.unit

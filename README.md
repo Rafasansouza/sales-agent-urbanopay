@@ -62,7 +62,7 @@ silenciosamente.
 | [SPEC-002](docs/specs/SPEC-002-cards-identity.md) | Cards & Identity | **Implementada** |
 | [SPEC-003](docs/specs/SPEC-003-orders-payments.md) | Orders & Payments | Não implementada |
 | [SPEC-004](docs/specs/SPEC-004-sales-agent-tools.md) | Sales Agent & Tools | Não implementada |
-| [SPEC-005](docs/specs/SPEC-005-fulfillment-post-sale.md) | Fulfillment & Post-Sale | Não implementada |
+| [SPEC-005](docs/specs/SPEC-005-fulfillment-post-sale.md) | Fulfillment & Post-Sale | Implementada (escopo `RECHARGE`) |
 | — | Catalog & Products | **Inexistente** (ver A-05) |
 
 ### Decisões arquiteturais
