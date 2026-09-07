@@ -34,6 +34,14 @@ Set-Location $RepoRoot
 
 $ComposeFile = Join-Path $RepoRoot 'infra/docker-compose.yml'
 
+# O docker compose resolve o `.env` a partir do diretorio do ARQUIVO compose
+# (`infra/`), nao da raiz do repositorio. Sem `--env-file` explicito, a
+# interpolacao de POSTGRES_PASSWORD falha e nenhum ambiente novo sobe, mesmo
+# com o `.env` presente na raiz. A fonte canonica e o `.env` da raiz
+# (ver `.env.example`).
+$EnvFile = Join-Path $RepoRoot '.env'
+$ComposeArgs = @('compose', '--env-file', $EnvFile, '-f', $ComposeFile)
+
 function Invoke-Step {
     <#
         Executa um comando externo e interrompe o script se o codigo de
@@ -104,13 +112,15 @@ switch ($Target) {
 
     'setup' { Invoke-Step 'uv sync' 'uv' @('sync') }
 
-    'up' { Invoke-Step 'compose up' 'docker' @('compose', '-f', $ComposeFile, 'up', '-d') }
+    # `--wait` aguarda os healthchecks: `up` so retorna quando o PostgreSQL
+    # aceita conexao, o que evita teste de integracao falhando por corrida.
+    'up' { Invoke-Step 'compose up' 'docker' ($ComposeArgs + @('up', '-d', '--wait')) }
 
-    'down' { Invoke-Step 'compose down' 'docker' @('compose', '-f', $ComposeFile, 'down') }
+    'down' { Invoke-Step 'compose down' 'docker' ($ComposeArgs + @('down')) }
 
-    'logs' { Invoke-Step 'compose logs' 'docker' @('compose', '-f', $ComposeFile, 'logs', '-f') }
+    'logs' { Invoke-Step 'compose logs' 'docker' ($ComposeArgs + @('logs', '-f')) }
 
-    'ps' { Invoke-Step 'compose ps' 'docker' @('compose', '-f', $ComposeFile, 'ps') }
+    'ps' { Invoke-Step 'compose ps' 'docker' ($ComposeArgs + @('ps')) }
 
     'api' {
         Invoke-Step 'uvicorn' 'uv' @(

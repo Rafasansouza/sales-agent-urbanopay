@@ -106,13 +106,19 @@ A **persistence foundation está implementada** em
 ambiente Alembic), com SQLAlchemy 2.0.x, psycopg 3.3.x e Alembic 1.19.x
 validados em Python 3.13.
 
+Sobre ela já nasceram os modelos, repositories e migrations de SPEC-001
+(`fare`), SPEC-002 (`identity`, `cards`) e SPEC-003 (`orders`, `approvals`,
+`payments` e a tabela transversal `idempotency_records`). A cadeia de
+revisions é `fare0001 → fare0002 → idc0001 → ord0001 → pay0001`, toda escrita
+à mão — nenhuma revision artificial e nenhum autogenerate cego.
+
 O que **ainda não existe**, por decisão:
 
-- modelos funcionais, repositories e migrations de negócio — nascem com as
-  SPECs (`versions/` está vazio; nenhuma revision artificial);
 - a dependência FastAPI "uma sessão por request" — entra com o primeiro
   endpoint que consumir o banco; a API não cria engine no startup;
-- `pgvector` (pacote Python) — adiado até existir consumidor real.
+- `pgvector` (pacote Python) — adiado até existir consumidor real;
+- modelos de `catalog`, `fulfillment`, `tickets` e `postsale` — nascem com as
+  SPECs correspondentes.
 
 Regras operacionais da foundation:
 
@@ -123,7 +129,12 @@ Regras operacionais da foundation:
 - em Windows, psycopg async exige `SelectorEventLoop`: o único ponto que trata
   isso é `urbanopay/core/event_loop.py` (solução específica do Python 3.13);
 - o teste `tests/unit/test_architecture_boundaries.py` reprova import de
-  SQLAlchemy/psycopg/Alembic em `modules/*/domain/`.
+  SQLAlchemy/psycopg/Alembic em `modules/*/domain/`;
+- constraints e índices são declarados **sem `name=` explícito** quando a
+  convenção de `db/base.py` já gera o nome (`uq`, `fk`, `pk`): passar um nome
+  literal sobrescreve a convenção e faz o `alembic check` divergir. Somente
+  `CheckConstraint` recebe nome curto, porque a convenção `ck` usa o token
+  `constraint_name`.
 
 ADR-012 governa **apenas as tabelas da aplicação e do domínio UrbanoPay**. A
 persistência das tabelas internas do LangGraph exige ADR próprio antes da

@@ -6,7 +6,11 @@
 #   .\scripts\dev.ps1 <alvo>
 # =============================================================================
 
-COMPOSE := docker compose -f infra/docker-compose.yml
+# `--env-file` é obrigatório: o docker compose resolve o `.env` a partir do
+# diretório do ARQUIVO compose (`infra/`), não da raiz do repositório. Sem ele,
+# a interpolação de POSTGRES_PASSWORD falha e nenhum ambiente novo sobe, mesmo
+# com o `.env` presente na raiz — que é a fonte canônica (ver `.env.example`).
+COMPOSE := docker compose --env-file .env -f infra/docker-compose.yml
 UV      := uv
 
 .DEFAULT_GOAL := help
@@ -25,8 +29,8 @@ setup: ## Instala o ambiente Python a partir do uv.lock
 
 # --- Infraestrutura local ----------------------------------------------------
 
-up: ## Sobe PostgreSQL, Redis e OTel Collector
-	$(COMPOSE) up -d
+up: ## Sobe PostgreSQL, Redis e OTel Collector (aguarda healthchecks)
+	$(COMPOSE) up -d --wait
 
 down: ## Derruba os containers preservando os volumes de dados
 	$(COMPOSE) down
