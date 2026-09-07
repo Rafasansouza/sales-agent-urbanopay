@@ -41,11 +41,27 @@ def selector_loop_factory() -> asyncio.AbstractEventLoop:
     return asyncio.SelectorEventLoop()
 
 
+def _windows_selector_policy() -> type[asyncio.AbstractEventLoopPolicy] | None:
+    """Resolve dinamicamente a classe de política exclusiva de Windows.
+
+    `asyncio.WindowsSelectorEventLoopPolicy` só existe em Windows. A resolução
+    via `getattr` — encapsulada aqui, e somente aqui — evita qualquer acesso
+    estático a API Windows-only, que reprovaria o mypy analisando o projeto em
+    Linux e impediria os testes de exercitarem este caminho em outras
+    plataformas.
+    """
+    policy: type[asyncio.AbstractEventLoopPolicy] | None = getattr(
+        asyncio, "WindowsSelectorEventLoopPolicy", None
+    )
+    return policy
+
+
 def ensure_selector_event_loop_policy() -> bool:
     """Aplica a política de selector em Windows, se ainda não aplicada.
 
     Devolve `True` quando a política foi alterada por esta chamada e `False`
-    quando nada foi feito — plataforma não-Windows ou política já compatível.
+    quando nada foi feito — plataforma não-Windows, política já compatível ou
+    classe indisponível.
 
     Deve ser chamada **antes** da criação do event loop (por exemplo, antes de
     `asyncio.run` ou do boot do servidor ASGI), nunca dentro de um loop em
@@ -54,9 +70,12 @@ def ensure_selector_event_loop_policy() -> bool:
     if sys.platform != "win32":
         return False
 
-    current = asyncio.get_event_loop_policy()
-    if isinstance(current, asyncio.WindowsSelectorEventLoopPolicy):
+    policy_cls = _windows_selector_policy()
+    if policy_cls is None:  # pragma: no cover - impossível em CPython/Windows
         return False
 
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    if isinstance(asyncio.get_event_loop_policy(), policy_cls):
+        return False
+
+    asyncio.set_event_loop_policy(policy_cls())
     return True
