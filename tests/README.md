@@ -55,11 +55,14 @@ Comportamento de LLM **nunca** é validado por asserção exata de string.
 
 ## Estado atual
 
-- `unit/` — teste de fumaça do health check, teste de arquitetura (domínio não
-  importa persistência) e testes do helper de event loop para Windows.
-- `integration/` — testes reais da persistence foundation (ADR-012): conexão,
-  Decimal, sessão, Unit of Work, naming convention e migrations. **Coleta
-  vazia reprova** nesta camada (H-07 resolvido para integration).
+- `unit/` — fumaça do health check, arquitetura (domínio não importa
+  persistência), event loop de Windows e o **domínio do Fare Engine**
+  (`unit/fare/`): 16 casos obrigatórios de SPEC-001 §12, classificação,
+  `ROUND_HALF_UP`, invariantes e prova AST de ausência de float.
+- `integration/` — persistence foundation (conexão, Decimal, UoW, naming
+  convention) e **Fare Engine** (`integration/fare/`): constraints violadas de
+  propósito, repositories por vigência, serviço fim a fim e ciclo completo de
+  migrations. **Coleta vazia reprova** nesta camada (H-07).
 - `e2e/` e `evals/` — vazios porque as SPECs não foram implementadas; nessas
   duas camadas, zero testes coletados ainda é o resultado esperado.
 

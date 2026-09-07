@@ -1,9 +1,10 @@
 # Questões Abertas
 
 **Projeto:** UrbanoPay Mobilidade
-**Última atualização:** 2026-09-06
+**Última atualização:** 2026-09-07
 **Origem:** análise documental realizada no bootstrap do repositório, atualizada
-pela aceitação do ADR-012 e pela implementação da persistence foundation.
+pela aceitação do ADR-012, pela persistence foundation e pela implementação da
+SPEC-001.
 
 ## Propósito
 
@@ -99,22 +100,28 @@ são alcançáveis a partir de `DRAFT`.
 
 ---
 
-## 🟠 A-04 — Composição de viagem exclusivamente de metrô é indefinida
+## ✅ A-04 — Composição de viagem exclusivamente de metrô
 
-**Bloqueia:** SPEC-001
-**Fonte:** SPEC-001 §5
+**Resolvido em 2026-09-07**, na aprovação do plano da SPEC-001, pela
+**interpretação conservadora**: dois ou mais segmentos exclusivamente de METRO
+resultam em `UNSUPPORTED_TRIP_COMPOSITION` — o erro tipado que SPEC-001 §11
+fornece exatamente para composição fora das três classes de §5.
 
-As três classes cobrem: `SINGLE` (exatamente um segmento), `COMMON` (dois ou
-mais segmentos exclusivamente de ônibus) e `INTEGRATION` (ao menos um ônibus e
-ao menos um metrô).
+Fundamento: rejeitar não inventa preço; classificar como `COMMON` inventaria
+uma regra tarifária que nenhum documento define. O resultado é determinístico
+(§13): a mesma composição sempre produz o mesmo erro.
 
-Dois ou mais segmentos exclusivamente de metrô **não pertencem a nenhuma
-classe**. O erro `UNSUPPORTED_TRIP_COMPOSITION` existe em §11 e é o candidato
-natural, mas a regra de classificação não afirma isso, e §13 exige
-determinismo ("mesma entrada + mesmas regras ⇒ mesmo resultado").
+Implementado em `TripClassifier` (SPEC-001), com testes unitários dedicados.
+Se o produto um dia definir tarifa para metrô-só multi-segmento, a mudança
+exige atualização da SPEC-001, não apenas de código.
 
-**O que precisa ser decidido:** essa composição é erro tipado, ou é `COMMON`
-com desconto 0%.
+Decisões estruturais aprovadas na mesma ocasião:
+
+- segmento METRO com `line_code` → `INVALID_SEGMENT_STRUCTURE` (METRO não
+  possui linha, §4);
+- BUS sem `line_code` (ou em branco) → `BUS_LINE_REQUIRED`;
+- `FARE_LINE_NOT_FOUND` é específico de BUS (linha jamais tarifada); METRO sem
+  tarifa vigente é sempre `FARE_NOT_AVAILABLE`.
 
 ---
 

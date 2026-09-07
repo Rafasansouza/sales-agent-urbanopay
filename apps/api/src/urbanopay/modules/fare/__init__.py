@@ -8,6 +8,6 @@ oficial do calculo.
 
 Documentos obrigatorios: SPEC-001; ADR-004, ADR-005.
 
-Estado: nao implementado. Ver o README deste diretorio antes de escrever
-qualquer codigo aqui.
+Estado: implementado (SPEC-001). Ver o README deste diretorio antes de
+alterar qualquer comportamento.
 """

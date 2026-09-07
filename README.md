@@ -58,7 +58,7 @@ silenciosamente.
 
 | SPEC | Domínio | Estado |
 |---|---|---|
-| [SPEC-001](docs/specs/SPEC-001-fare-engine.md) | Fare Engine | Não implementada |
+| [SPEC-001](docs/specs/SPEC-001-fare-engine.md) | Fare Engine | **Implementada** |
 | [SPEC-002](docs/specs/SPEC-002-cards-identity.md) | Cards & Identity | Não implementada |
 | [SPEC-003](docs/specs/SPEC-003-orders-payments.md) | Orders & Payments | Não implementada |
 | [SPEC-004](docs/specs/SPEC-004-sales-agent-tools.md) | Sales Agent & Tools | Não implementada |
@@ -285,7 +285,6 @@ Detalhadas em [`docs/OPEN-QUESTIONS.md`](docs/OPEN-QUESTIONS.md).
 |---|---|
 | C-01 | PRD §8 e SPEC-003 §14 discordam sobre a ordem entre confirmação do passageiro e aprovação humana |
 | C-02 | Não existe transição de estado que permita segunda tentativa de pagamento após rejeição |
-| A-04 | Composição de viagem exclusivamente de metrô não está classificada |
 | A-05 | Módulo `catalog` sem SPEC — `TICKET_PURCHASE` não é implementável |
 | A-06 | `calculate_usage_cost` exposta em SPEC-004 mas não especificada |
 | A-07 | Interface administrativa de aprovação humana sem especificação |
