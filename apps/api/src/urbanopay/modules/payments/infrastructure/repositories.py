@@ -98,6 +98,23 @@ class SqlAlchemyPaymentRepository:
         model = (await self._session.execute(stmt)).scalar_one_or_none()
         return _to_payment(model) if model is not None else None
 
+    async def get_latest_for_order(self, order_id: UUID) -> Payment | None:
+        """Tentativa mais recente do Order (§13).
+
+        `id` como critério de desempate mantém o resultado determinístico caso
+        dois registros compartilhem o mesmo `created_at` — o que os
+        invariantes de §13 não permitem, mas que a consulta não deve depender
+        de supor.
+        """
+        stmt = (
+            sa.select(PaymentModel)
+            .where(PaymentModel.order_id == order_id)
+            .order_by(PaymentModel.created_at.desc(), PaymentModel.id.desc())
+            .limit(1)
+        )
+        model = (await self._session.execute(stmt)).scalar_one_or_none()
+        return _to_payment(model) if model is not None else None
+
     async def find_by_provider_payment_id(
         self, *, provider: ProviderName, provider_payment_id: str
     ) -> Payment | None:

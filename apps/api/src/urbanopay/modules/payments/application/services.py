@@ -57,6 +57,7 @@ from urbanopay.modules.payments.domain.errors import (
     PaymentStatusUnknownError,
 )
 from urbanopay.modules.payments.domain.results import (
+    OrderPaymentStatus,
     PaymentCreationResult,
     WebhookProcessingResult,
 )
@@ -468,9 +469,36 @@ class PaymentService:
         return application.payment
 
     async def get_payment(self, *, payment_id: uuid.UUID) -> Payment:
-        """Consulta de leitura. Não altera estado nem consulta o provider."""
+        """Consulta de leitura. Não altera estado nem consulta o provider.
+
+        **Sem filtro de titularidade, por escopo:** o chamador é backend — o
+        aplicador de estado, a reconciliação. Fluxo de cliente usa
+        `get_payment_status_for_order`, que parte do Order.
+        """
         async with self._uow:
             payment = await self._uow.payments.get(payment_id)
         if payment is None:
             raise PaymentNotFoundError
         return payment
+
+    async def get_payment_status_for_order(
+        self, *, customer_id: uuid.UUID, order_id: uuid.UUID
+    ) -> OrderPaymentStatus:
+        """Situação de pagamento de um Order do próprio cliente (§13).
+
+        Leitura pura: não altera estado e **não consulta o provider** — a
+        consulta ativa é `reconcile_payment`, que é comando de backend e tem
+        efeito. Confundir as duas faria uma pergunta do cliente disparar
+        tráfego externo e escrita de evento.
+
+        A titularidade é verificada contra o **Order**, em consulta única: um
+        Order de outro cliente responde `ORDER_NOT_ACCESSIBLE` sem revelar se
+        existe, e sem que qualquer Payment seja lido.
+        """
+        async with self._uow:
+            order = await self._uow.orders.get_owned(customer_id=customer_id, order_id=order_id)
+            if order is None:
+                raise OrderNotAccessibleError
+            latest = await self._uow.payments.get_latest_for_order(order_id)
+
+        return OrderPaymentStatus(order_id=order_id, latest=latest)

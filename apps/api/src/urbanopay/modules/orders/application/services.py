@@ -38,6 +38,7 @@ from urbanopay.core.idempotency import (
 from urbanopay.modules.approvals.domain.entities import Approval
 from urbanopay.modules.approvals.domain.enums import ApprovalStatus
 from urbanopay.modules.approvals.domain.errors import ApprovalNotFoundError
+from urbanopay.modules.approvals.domain.results import ApprovalDecision
 from urbanopay.modules.orders.domain.entities import LineItem, Order, Quote
 from urbanopay.modules.orders.domain.enums import (
     CURRENCY_BRL,
@@ -464,6 +465,33 @@ class OrderService:
         """Consulta do cliente, sempre filtrada por titularidade."""
         async with self._uow:
             return await self._require_owned(customer_id=customer_id, order_id=order_id)
+
+    async def get_approval_status(
+        self, *, customer_id: uuid.UUID, order_id: uuid.UUID
+    ) -> ApprovalDecision:
+        """Estado da aprovação humana de um Order do próprio cliente (§7).
+
+        O Sales Agent **consulta** o status; nunca aprova nem rejeita (§7, §18).
+        Por isso esta leitura vive aqui, e não em `approvals`: a titularidade
+        que a protege é a do **Order**, e é o `OrdersUnitOfWork` que reúne os
+        dois repositories sem criar dependência nova — `approvals` continua
+        sem conhecer `orders`.
+
+        Ausência de `Approval` não é erro: um Order que não exige aprovação
+        nunca teve uma, e um Order ainda em `DRAFT` também não. Os dois casos
+        se distinguem por `requires_approval`, congelado na criação (§5).
+        """
+        async with self._uow:
+            order = await self._require_owned(customer_id=customer_id, order_id=order_id)
+            approval = await self._uow.approvals.get_for_order(order_id)
+
+        return ApprovalDecision(
+            order_id=order.id,
+            requires_approval=order.requires_approval,
+            status=approval.status if approval is not None else None,
+            requested_at=approval.requested_at if approval is not None else None,
+            decided_at=approval.decided_at if approval is not None else None,
+        )
 
     async def _require_owned(self, *, customer_id: uuid.UUID, order_id: uuid.UUID) -> Order:
         order = await self._uow.orders.get_owned(customer_id=customer_id, order_id=order_id)
