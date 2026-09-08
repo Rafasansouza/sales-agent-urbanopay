@@ -55,6 +55,25 @@ class PaymentRepository(Protocol):
         """Payment `APPROVED` do Order, se existir. No máximo um (§13)."""
         ...
 
+    async def get_latest_for_order(self, order_id: UUID) -> Payment | None:
+        """Tentativa mais recente do Order, em qualquer estado.
+
+        Existe para duas necessidades, ambas de leitura, e é deliberadamente
+        **uma** consulta em vez de uma listagem: a orquestração não precisa —
+        e não deve — enumerar tentativas nem contá-las para reconstruir a
+        máquina financeira.
+
+        1. responder `get_payment_status(order_id)` (SPEC-004 §7);
+        2. identificar a tentativa terminal anterior quando uma **nova
+           tentativa comercial** for legítima (§13.2), fornecendo a evidência
+           persistida de que a nova identidade de idempotência deriva.
+
+        "Mais recente" é bem definido pelos invariantes de §13: nenhum Payment
+        nasce enquanto existir tentativa ativa ou aprovada no Order, então a
+        última criada é sempre a que descreve o estado corrente.
+        """
+        ...
+
     async def find_by_provider_payment_id(
         self, *, provider: ProviderName, provider_payment_id: str
     ) -> Payment | None:
