@@ -4,8 +4,10 @@
 **Última atualização:** 2026-09-07
 **Origem:** análise documental realizada no bootstrap do repositório, atualizada
 pela aceitação do ADR-012, pela persistence foundation, pelas implementações
-das SPEC-001 e SPEC-002, e pela correção documental da state machine da
-SPEC-003 (C-01, C-02, A-03, A-09, A-10, A-13).
+das SPEC-001 e SPEC-002, pela correção documental da state machine da
+SPEC-003 (C-01, C-02, A-03, A-09, A-10, A-13), pela implementação da SPEC-005
+(A-16, A-17, A-18) e pela **Etapa 1 da SPEC-004** (A-19, A-20, A-21, e
+atualização de A-05, A-06 e H-11).
 
 Nota de segurança registrada (evolução futura, sem item próprio): a sessão
 mantém o mesmo ID após a autenticação (decisão aprovada para o MVP); rotação
@@ -157,6 +159,13 @@ SPECs existentes; `TICKET_PURCHASE` **não é**, sem inventar regra de negócio.
 **Encaminhamento:** requer uma `SPEC-006 — Catalog & Products`, escrita como
 decisão de produto e não derivada pela implementação.
 
+**Estado em 2026-09-07 (Etapa 1 da SPEC-004):** a indisponibilidade passou a
+ser **explícita e executável**. `search_products`, `get_product` e `get_ticket`
+permanecem declaradas em SPEC-004 §7.3 e resolvem para `TOOL_UNAVAILABLE`
+nomeando este bloqueio; nenhuma tool fictícia foi criada e `TICKET_PURCHASE`
+segue recusado no domínio. A contradição de SPEC-005 §15, que permitia
+`get_ticket` sem `Ticket` materializado, foi eliminada na mesma data.
+
 ---
 
 ## 🟠 A-06 — Tool `calculate_usage_cost` sem especificação
@@ -171,6 +180,12 @@ SPEC-001 especifica apenas `calculate_trip_fare`.
 **O que precisa ser decidido:** contrato de entrada (frequência, número de
 dias, ida e volta, horizonte semanal ou mensal), contrato de saída, tratamento
 de saldo já existente no cartão e casos determinísticos obrigatórios.
+
+**Estado em 2026-09-07 (Etapa 1 da SPEC-004):** `calculate_usage_cost` está
+declarada em SPEC-004 §7.3 e resolve para `TOOL_UNAVAILABLE` nomeando este
+bloqueio. Consequência registrada na SPEC: **o agente não recomenda valor de
+recarga**. O valor é informado pelo cliente e validado pelo domínio
+(`INVALID_RECHARGE_AMOUNT`). Nenhuma projeção de uso foi inventada.
 
 ---
 
@@ -427,6 +442,104 @@ administrativa que A-07 já exige.
 
 ---
 
+## ✅ A-19 — Seam pós-pagamento: quem invoca `fulfill_order`
+
+**Descoberto em 2026-09-07**, na análise da SPEC-004.
+**Resolvido em 2026-09-07** em `SPEC-005 §10.1`. **Implementação pendente.**
+
+Nenhum documento nomeava o iniciador do fulfillment. SPEC-005 §10 dizia
+"iniciado pelo backend"; §1.1 removeu scheduler e job desta versão; ADR-002
+tira o webhook do grafo; e SPEC-004 §7 não lista `fulfill_order` entre as
+tools. O resultado era um vão real: `Order PAID` existia e **nada** chamava
+`fulfill_order`.
+
+**Política aprovada (SPEC-005 §10.1):** todo caminho de backend que faça o
+estado convergir para `Payment APPROVED` ⇒ `Order PAID` entrega, **após o
+commit financeiro**, o `order_id` a uma camada de composição `BACKEND_ONLY`,
+que chama `fulfill_order(order_id)`. Vale para webhook, para consulta ativa de
+reconciliação e para qualquer outro caminho de backend autorizado.
+
+Restrições preservadas: o Sales Agent não chama `fulfill_order` em nível algum;
+`payments` **não** importa `fulfillment` (o ciclo é evitado pondo o coordenador
+acima dos dois módulos); o disparo é posterior ao commit, não é retentativa
+automática, e o caso não se perde — a capacidade de recuperação de §20.1
+localiza `Order PAID` sem `Fulfillment COMPLETED`.
+
+**O que falta:** o coordenador não existe. Sua implementação pertence à Etapa 3
+da SPEC-004 (§22), junto do webhook HTTP. Hoje `fulfill_order` só é alcançado
+por chamada explícita de backend — que é o que os testes fazem.
+
+**Sobre a necessidade de ADR (decidido em 2026-09-07):** um coordenador que
+seja apenas composição em processo — uma função que, após o commit, chama
+`fulfill_order(order_id)` — **não** é fronteira arquitetural nova e **não**
+exige ADR. Ele é exatamente o que ADR-001 já prevê: comunicação interna em
+processo, com módulos que não se conhecem em direção proibida.
+
+Um ADR novo passa a ser necessário **se, e somente se,** a Etapa 3 introduzir
+uma fronteira arquitetural real, por exemplo:
+
+- fila ou broker de mensagens;
+- worker ou processo separado;
+- scheduler;
+- qualquer mecanismo assíncrono **persistente** (outbox, tabela de jobs).
+
+Nesse caso o ADR precede a implementação, porque cada um desses itens
+acrescenta infraestrutura, estado durável e modo de falha próprio. ADR-001 não
+foi alterado nesta etapa.
+
+---
+
+## ✅ A-20 — Códigos de guarda da camada de orquestração
+
+**Descoberto e ratificado em 2026-09-07**, na Etapa 1 da SPEC-004, seguindo a
+mesma disciplina de A-14: a implementação precisou de recusas que nenhuma SPEC
+nomeava, e os códigos foram registrados em vez de silenciados.
+
+Seis códigos, agora documentados em **SPEC-004 §20**:
+`TOOL_NOT_AUTHORIZED`, `TOOL_UNAVAILABLE`, `TOOL_LIMIT_EXCEEDED`,
+`NO_PENDING_CONFIRMATION`, `CONFIRMATION_CONTEXT_MISMATCH` e `INTERNAL_ERROR`.
+
+Eles são **de orquestração, não de domínio**: descrevem por que uma invocação
+foi recusada antes de qualquer serviço ser chamado. Nenhum deles cria, altera
+ou encerra estado financeiro, e nenhum status HTTP foi definido.
+
+Decisão associada, para **não** ampliar o conjunto: falha estrutural de
+argumento não recebeu código próprio. Cada tool declara para qual código
+semântico já existente ela traduz um argumento inválido ou ausente
+(`CARD_NOT_ACCESSIBLE`, `ORDER_NOT_ACCESSIBLE`, `INVALID_RECHARGE_AMOUNT`,
+`INVALID_FARE_PROFILE`, `EMPTY_TRIP`, `INVALID_DOCUMENT`). Para
+identificadores, a tradução é também a resposta correta de anti-enumeração.
+
+---
+
+## ✅ A-21 — Divergência de nomenclatura de tools
+
+**Registrado e resolvido em 2026-09-07**, na aprovação da Etapa 1 da SPEC-004.
+
+**Regra adotada:** o nome canônico de uma tool é **exclusivamente** o nome
+normativo da SPEC do domínio correspondente. Nomes alternativos não são
+adotados, e **nenhum alias é criado** — um alias transformaria a divergência
+em duas verdades permanentes, exatamente o que este registro existia para
+evitar.
+
+| Nome alternativo | Nome canônico | Fonte normativa |
+|---|---|---|
+| `verify_authentication` | **`verify_otp`** | SPEC-002 §10, SPEC-004 §7 |
+| `get_product_details` | **`get_product`** | SPEC-004 §7 |
+| `calculate_recharge_need` | **`calculate_usage_cost`** | SPEC-004 §7 — `CALCULATE_RECHARGE_NEED` é o **intent** do PRD §9, não o nome da tool |
+
+Estado verificado na implementação: os três nomes canônicos são os únicos
+presentes no código, e os alternativos não aparecem em nenhum arquivo `.py`.
+`get_product`, `search_products`, `get_ticket` e `calculate_usage_cost` estão
+declarados como indisponíveis (SPEC-004 §7.3), bloqueados por A-05 e A-06.
+
+Decisão associada, na mesma ocasião: `get_authentication_status` permanece
+`GRAPH_ONLY` (SPEC-004 §7.2) — quem decide parar a jornada para autenticar é
+código, e o resultado é um booleano de sessão que o modelo não precisa
+formular.
+
+---
+
 ## Pendências declaradas pelo próprio PRD §19
 
 Reproduzidas aqui apenas para consolidar a visão. A fonte permanece o PRD.
@@ -527,7 +640,26 @@ estratégia.
 **Ação obrigatória até lá:** nenhum `setup()` automático de schema do LangGraph
 pode ser introduzido.
 
-**Encaminhamento:** exige ADR próprio, **antes** da implementação da SPEC-004.
+**Encaminhamento:** exige ADR próprio — **ADR-014** —, **antes** da Etapa 2 da
+SPEC-004 (§22).
+
+**Estado em 2026-09-07:** a Etapa 1 da SPEC-004 foi implementada **sem tocar
+nesta questão**: não há LangGraph, não há checkpointer, não existe tabela
+`agent_conversations`, nenhuma migration foi criada e nenhuma dependência foi
+adicionada. A camada determinística de tools não precisa de estado durável, e
+o estado de orquestração usado nos testes é efêmero e explicitamente não
+autoritativo (SPEC-004 §3.1).
+
+Direção arquitetural aprovada para o ADR-014, a ser redigido antes da Etapa 2:
+
+- o estado conversacional durável **pertence à aplicação**, não ao framework;
+- a persistência é **versionada por Alembic**, como qualquer tabela da
+  UrbanoPay (ADR-012);
+- checkpoint ou estado de framework **nunca** é source of truth de negócio;
+- se a cláusula de ADR-002 sobre checkpoints duráveis for lida como exigência
+  de checkpointer gerenciado diretamente pelo LangGraph, o ADR-014 deve
+  **clarificar ou substituir explicitamente** essa cláusula. O ADR-002 não foi
+  alterado nesta etapa.
 
 ### ✅ A-13 — Ciclo de vida de `IdempotencyRecord` em `IN_PROGRESS`
 
