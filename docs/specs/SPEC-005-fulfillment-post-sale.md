@@ -183,6 +183,58 @@ A idempotência por `quantity` do OrderItem também fica pendente: `RECHARGE` te
 ## 10. Independência do agente
 Fulfillment é iniciado pelo backend após pagamento; continua mesmo se usuário fechar o navegador ou LLM ficar indisponível.
 
+### 10.1 Quem invoca `fulfill_order` — seam pós-pagamento
+
+A §10 exigia "iniciado pelo backend" sem nomear o iniciador, e a §1.1 removeu
+scheduler e job desta versão. O resultado era um vão: `Order PAID` existia e
+nada chamava `fulfill_order`. A política abaixo fecha esse vão (**A-19**).
+
+**Todo caminho de backend que faça o estado convergir para `Payment APPROVED`
+⇒ `Order PAID` deve, depois do commit financeiro, entregar o `order_id` a uma
+camada de composição `BACKEND_ONLY`, responsável por chamar
+`fulfill_order(order_id)`.**
+
+Vale igualmente para os caminhos que aplicam `APPROVED`: o webhook do provider,
+a consulta ativa de reconciliação, e qualquer outro caminho de backend
+autorizado que venha a existir.
+
+Restrições que a política preserva:
+
+- **o Sales Agent não chama `fulfill_order`** — não é tool em nível algum
+  (SPEC-004 §7.4);
+- **`payments` não importa `fulfillment`.** Inverter isso criaria ciclo:
+  `fulfillment` já lê `payments` para validar `Payment APPROVED` (§11.1). O
+  coordenador vive **acima** dos dois módulos, e nenhum dos dois conhece o
+  outro nessa direção;
+- o disparo acontece **após** o commit financeiro, nunca dentro da transação
+  que aprova o pagamento: entrega e cobrança são eventos distintos (§2);
+- o disparo **não** é retentativa automática. Se o fulfillment não puder ser
+  executado, o caso não se perde: a capacidade de recuperação da §20.1 localiza
+  `Order PAID` sem `Fulfillment COMPLETED`, e a reentrada continua sendo por
+  comando explícito (§5.1).
+
+```text
+provider  → webhook / consulta ativa
+            → PaymentService  (Payment APPROVED, Order PAID, commit)
+                → coordenador de composição (BACKEND_ONLY)
+                    → FulfillmentService.fulfill_order(order_id)
+```
+
+**Estado:** decisão registrada; **implementação pendente**. O coordenador não
+existe nesta versão — hoje `fulfill_order` só é alcançado por chamada explícita
+de backend, que é o que os testes fazem.
+
+**Forma do coordenador.** Composição **em processo** é suficiente e é o que
+esta política prescreve: uma função que, depois do commit financeiro, chama
+`fulfill_order(order_id)`. Isso não cria fronteira arquitetural nova — é a
+comunicação interna que ADR-001 já prevê — e portanto não exige ADR.
+
+Exige ADR próprio, **antes** da implementação, apenas se for introduzida
+fronteira real: fila ou broker, worker ou processo separado, scheduler, ou
+qualquer mecanismo assíncrono **persistente** (outbox, tabela de jobs). Cada um
+desses acrescenta infraestrutura, estado durável e modo de falha próprio — e a
+§1.1 desta SPEC declara explicitamente que nenhum deles existe nesta versão.
+
 ## 11. Falhas
 - falha conhecida antes de efeito => `FAILED`;
 - falha na transação local => rollback;
@@ -281,6 +333,19 @@ Permitir, autenticado e autorizado:
 - `get_ticket`;
 - `get_receipt`;
 - `get_card_balance`.
+
+Todas somente leitura e todas filtradas por titularidade.
+
+⚠️ **`get_ticket` está declarada e indisponível.** `Ticket` não é materializado
+(§9, §4.1) enquanto **A-05** estiver aberta, então a tool não pode ter backend:
+ela resolve para `TOOL_UNAVAILABLE` com o bloqueio nomeado (SPEC-004 §7.3), e
+**nunca** é substituída por comportamento fictício. Permitir a tool sem a
+entidade era contradição entre esta §15 e a §9; o registro acima a elimina sem
+inventar produto.
+
+`fulfill_order` **não** aparece nesta lista e não é tool do agente em nível
+algum: o disparo é responsabilidade da camada de composição de backend
+(§10.1).
 
 ## 16. Tools proibidas
 - `apply_recharge`;

@@ -145,10 +145,39 @@ contradiz a máquina de estados aceita.
 Persistir apenas IDs opacos, `card_last4`, valores e timestamps. **Nunca** CPF,
 OTP, nome desnecessário, número completo de cartão ou payload de provider.
 
+## Quem dispara o fulfillment
+
+Fonte: SPEC-005 §10.1 (A-19, decisão registrada; **implementação pendente**).
+
+Todo caminho de backend que faça o estado convergir para `Payment APPROVED` ⇒
+`Order PAID` entrega, **após o commit financeiro**, o `order_id` a uma camada
+de composição `BACKEND_ONLY`, que chama `fulfill_order(order_id)`. Vale para
+webhook e para consulta ativa de reconciliação.
+
+- O Sales Agent **não** chama `fulfill_order`, em nível de visibilidade algum.
+- **`payments` não importa `fulfillment`** — o ciclo é evitado pondo o
+  coordenador acima dos dois módulos.
+- O disparo é posterior ao commit e **não** é retentativa automática. Se
+  falhar, a capacidade de recuperação de §20.1 localiza `Order PAID` sem
+  `Fulfillment COMPLETED`.
+
+O coordenador **ainda não existe** (Etapa 3 da SPEC-004 §22). Hoje
+`fulfill_order` só é alcançado por chamada explícita de backend.
+
+Composição **em processo** não é fronteira nova e não exige ADR. Exige ADR
+próprio, antes da implementação, apenas fila/broker, worker ou processo
+separado, scheduler, ou mecanismo assíncrono **persistente** (outbox, tabela de
+jobs) — nenhum deles existe nesta versão (SPEC-005 §1.1).
+
 ## Tools permitidas ao Sales Agent
 
-`get_fulfillment_status`, `get_ticket`, `get_receipt`, `get_card_balance` —
-todas somente leitura.
+`get_fulfillment_status`, `get_receipt`, `get_card_balance` — todas somente
+leitura e filtradas por titularidade.
+
+⚠️ `get_ticket` está **declarada e indisponível**: `Ticket` não é materializado
+enquanto A-05 estiver aberta, então a tool resolve para `TOOL_UNAVAILABLE`
+nomeando o bloqueio (SPEC-004 §7.3, SPEC-005 §15). Nunca comportamento
+fictício.
 
 ## Tools proibidas
 
