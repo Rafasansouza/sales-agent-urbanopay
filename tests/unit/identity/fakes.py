@@ -30,7 +30,13 @@ FIXED_OTP = "123456"
 MARIANA_CPF = "11122233344"
 
 
-def test_hasher() -> IdentityHasher:
+def build_hasher() -> IdentityHasher:
+    """Hasher com o segredo fictício da suíte.
+
+    O nome **não** começa com `test_`: é helper, não teste. Com o prefixo, o
+    pytest o coletava como caso de teste sem marcador — desselecionado em todo
+    alvo e distorcendo a contagem da suíte.
+    """
     return IdentityHasher(TEST_SECRET)
 
 
@@ -44,7 +50,7 @@ def make_customer(
     return Customer(
         id=customer_id if customer_id is not None else uuid.uuid4(),
         name=name,
-        cpf_hash=test_hasher().hash_cpf(cpf),
+        cpf_hash=build_hasher().hash_cpf(cpf),
         status=status,
         created_at=FIXED_NOW,
         updated_at=FIXED_NOW,

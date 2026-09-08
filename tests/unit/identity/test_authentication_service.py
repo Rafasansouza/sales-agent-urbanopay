@@ -13,8 +13,8 @@ from tests.unit.identity.fakes import (
     MARIANA_CPF,
     FakeIdentityUnitOfWork,
     FakeOtpGenerator,
+    build_hasher,
     make_customer,
-    test_hasher,
 )
 from urbanopay.modules.identity.application.services import (
     AuthenticationService,
@@ -46,7 +46,7 @@ def build(
     sessions = SessionService(uow, session_ttl=SESSION_TTL)
     auth = AuthenticationService(
         uow,
-        test_hasher(),
+        build_hasher(),
         FakeOtpGenerator(),
         otp_ttl=OTP_TTL,
         otp_max_attempts=max_attempts,

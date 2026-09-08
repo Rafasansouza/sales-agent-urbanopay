@@ -6,7 +6,7 @@ import uuid
 
 import pytest
 
-from tests.unit.identity.fakes import TEST_SECRET, test_hasher
+from tests.unit.identity.fakes import TEST_SECRET, build_hasher
 from urbanopay.modules.identity.domain.value_objects import IdentityHasher, normalize_document
 
 
@@ -40,7 +40,7 @@ def test_formato_invalido_retorna_none(raw: str) -> None:
 
 @pytest.mark.unit
 def test_hash_cpf_deterministico_e_sem_plaintext() -> None:
-    hasher = test_hasher()
+    hasher = build_hasher()
     digest = hasher.hash_cpf("11122233344")
 
     assert digest == hasher.hash_cpf("11122233344")
@@ -59,7 +59,7 @@ def test_hash_muda_com_o_segredo() -> None:
 @pytest.mark.unit
 def test_separacao_de_dominio_entre_cpf_e_otp() -> None:
     """Prefixos `cpf:`/`otp:` — mesmo insumo nunca colide entre domínios."""
-    hasher = test_hasher()
+    hasher = build_hasher()
     challenge_id = uuid.UUID("00000000-0000-4000-8000-000000000001")
     assert hasher.hash_cpf("123456") != hasher.hash_otp(challenge_id, "123456")
 
@@ -67,7 +67,7 @@ def test_separacao_de_dominio_entre_cpf_e_otp() -> None:
 @pytest.mark.unit
 def test_hash_otp_vinculado_ao_challenge() -> None:
     """O mesmo OTP em challenges diferentes produz hashes diferentes (anti-replay)."""
-    hasher = test_hasher()
+    hasher = build_hasher()
     a = uuid.UUID("00000000-0000-4000-8000-00000000000a")
     b = uuid.UUID("00000000-0000-4000-8000-00000000000b")
     assert hasher.hash_otp(a, "123456") != hasher.hash_otp(b, "123456")
@@ -75,7 +75,7 @@ def test_hash_otp_vinculado_ao_challenge() -> None:
 
 @pytest.mark.unit
 def test_verificacao_de_otp() -> None:
-    hasher = test_hasher()
+    hasher = build_hasher()
     challenge_id = uuid.uuid4()
     stored = hasher.hash_otp(challenge_id, "123456")
 
@@ -92,4 +92,4 @@ def test_segredo_vazio_e_rejeitado() -> None:
 
 @pytest.mark.unit
 def test_repr_do_hasher_nao_expoe_segredo() -> None:
-    assert TEST_SECRET not in repr(test_hasher())
+    assert TEST_SECRET not in repr(build_hasher())
