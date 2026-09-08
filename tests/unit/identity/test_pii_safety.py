@@ -14,8 +14,8 @@ from tests.unit.identity.fakes import (
     TEST_SECRET,
     FakeIdentityUnitOfWork,
     FakeOtpGenerator,
+    build_hasher,
     make_customer,
-    test_hasher,
 )
 from urbanopay.modules.identity.application.services import (
     AuthenticationService,
@@ -45,7 +45,7 @@ def test_repr_de_customer_nao_expoe_cpf_hash() -> None:
 def test_repr_de_challenge_nao_expoe_otp_hash() -> None:
     import uuid
 
-    hasher = test_hasher()
+    hasher = build_hasher()
     challenge_id = uuid.uuid4()
     challenge = OTPChallenge(
         id=challenge_id,
@@ -90,7 +90,7 @@ async def test_fluxo_completo_nao_loga_segredos(caplog: pytest.LogCaptureFixture
     sessions = SessionService(uow, session_ttl=timedelta(minutes=30))
     auth = AuthenticationService(
         uow,
-        test_hasher(),
+        build_hasher(),
         FakeOtpGenerator(),
         otp_ttl=timedelta(minutes=5),
         otp_max_attempts=5,
