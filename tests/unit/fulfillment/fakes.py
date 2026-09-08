@@ -135,6 +135,12 @@ class FakePaymentRepository:
                 return payment
         return None
 
+    async def get_latest_for_order(self, order_id: uuid.UUID) -> Payment | None:
+        candidates = [p for p in self._state.payments.values() if p.order_id == order_id]
+        if not candidates:
+            return None
+        return max(candidates, key=lambda p: (p.created_at, p.id))
+
     async def find_by_provider_payment_id(
         self, *, provider: object, provider_payment_id: str
     ) -> Payment | None:
