@@ -82,6 +82,7 @@ silenciosamente.
 | [011](docs/adr/ADR-011-web-frontend-stack.md) | Stack do frontend web | **Proposta** |
 | [012](docs/adr/ADR-012-persistence-orm-migrations.md) | Persistência, ORM e migrations | Aceito |
 | [013](docs/adr/ADR-013-python-toolchain.md) | Toolchain Python | Aceito |
+| [014](docs/adr/ADR-014-agent-state-persistence.md) | Persistência do estado conversacional do agente | Aceito |
 
 ---
 
@@ -287,9 +288,18 @@ Detalhadas em [`docs/OPEN-QUESTIONS.md`](docs/OPEN-QUESTIONS.md).
 | A-06 | `calculate_usage_cost` exposta em SPEC-004 mas não especificada |
 | A-07 | Interface administrativa de aprovação humana sem especificação |
 | A-08 | Stack do frontend sem ADR aceito |
-| H-11 | Persistência das tabelas internas do LangGraph exige ADR próprio antes da SPEC-004 |
 
 Nenhuma dessas lacunas deve ser preenchida pela implementação.
+
+**H-11 foi resolvida** em 2026-09-08 pelo
+[ADR-014](docs/adr/ADR-014-agent-state-persistence.md): a persistência do
+estado conversacional pertence à aplicação e é versionada por Alembic; nenhum
+checkpointer durável nativo do LangGraph é adotado no MVP.
+
+Com isso a Etapa 2 da SPEC-004 fica **arquiteturalmente desbloqueada**, e ainda
+não implementada. A introdução do LangGraph continua dependendo da validação de
+compatibilidade com Python 3.13 registrada em **H-05**, que permanece aberta e
+deve ser verificada antes de instalar a dependência.
 
 Há ainda duas divergências **documentais** abertas pela implementação da
 SPEC-003, que não bloqueiam comportamento: **A-14** (três erros necessários

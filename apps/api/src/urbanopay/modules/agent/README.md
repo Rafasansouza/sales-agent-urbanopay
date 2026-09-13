@@ -43,9 +43,15 @@ verificadas por `tests/unit/test_architecture_boundaries.py`.
 ## O que NAO existe, por decisao
 
 - **LangGraph, provider de LLM, prompt, evals e limites de token/custo** —
-  Etapa 2, bloqueada por **ADR-014** (ver H-11 em `docs/OPEN-QUESTIONS.md`).
+  Etapa 2, **arquiteturalmente desbloqueada** pelo ADR-014 (que resolveu H-11)
+  e ainda nao implementada. A introducao do LangGraph depende da validacao de
+  compatibilidade com Python 3.13 registrada em **H-05**, que segue aberta e
+  deve ser verificada antes de instalar a dependencia.
 - **Persistencia conversacional** — nenhuma tabela, nenhuma migration. O
-  `ConversationState` e efemero e explicitamente nao autoritativo.
+  `ConversationState` e efemero e explicitamente nao autoritativo. A direcao
+  foi decidida em **ADR-014**: tabela `agent_conversations` da aplicacao,
+  versionada por Alembic, **sem** checkpointer nativo do LangGraph e **sem**
+  schema criado por framework.
 - **Transporte HTTP, webhook e coordenador pos-pagamento** — Etapa 3
   (SPEC-005 §10.1 / A-19).
 
@@ -99,6 +105,8 @@ nome vindo do modelo.
 
 1. Leia a SPEC correspondente por inteiro, nao de memoria.
 2. Leia `docs/OPEN-QUESTIONS.md` e confirme que nenhuma pendencia bloqueia a
-   tarefa. Abertas e relevantes: A-05, A-06, A-07, A-18, A-21, H-11, H-12.
+   tarefa. Abertas e relevantes: A-05, A-06, A-07, A-14, A-15, A-18, H-12.
+   Ja resolvidas: A-21 (nomenclatura de tools) e H-11 (persistencia
+   conversacional, pelo ADR-014).
 3. Confirme que os ADRs necessarios estao com status Aceito.
 4. Use a skill `prepare-task` antes de escrever codigo.
