@@ -30,7 +30,9 @@ WORKDIR /app
 # Primeiro só os manifestos: esta camada é reaproveitada enquanto as
 # dependências não mudarem.
 COPY pyproject.toml uv.lock ./
-COPY apps/api/pyproject.toml apps/api/pyproject.toml
+# O README acompanha o manifesto: `apps/api/pyproject.toml` o declara em
+# `readme`, e o hatchling falha o build sem ele.
+COPY apps/api/pyproject.toml apps/api/README.md apps/api/
 
 # `--no-install-project` instala apenas as dependências; o pacote da aplicação
 # entra no passo seguinte, junto com o código.

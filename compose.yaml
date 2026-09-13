@@ -59,10 +59,13 @@ services:
   # continua sendo a autoridade do schema: nenhum `create_all()`, nenhum
   # `setup()` de framework (ADR-012, ADR-014).
   migrate:
-    build:
-      context: .
-      dockerfile: apps/api/Dockerfile
+    # Sem `build:` próprio, de propósito: o job usa **a mesma imagem** da API,
+    # construída uma única vez pelo serviço `api`. Dois serviços exportando a
+    # mesma tag ao mesmo tempo colidem no builder, e construir duas imagens
+    # idênticas seria desperdício — o que migra precisa ser exatamente o que
+    # roda.
     image: urbanopay-api:local
+    pull_policy: never
     restart: "no"
     env_file:
       - .env

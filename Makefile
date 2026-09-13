@@ -6,11 +6,10 @@
 #   .\scripts\dev.ps1 <alvo>
 # =============================================================================
 
-# `--env-file` é obrigatório: o docker compose resolve o `.env` a partir do
-# diretório do ARQUIVO compose (`infra/`), não da raiz do repositório. Sem ele,
-# a interpolação de POSTGRES_PASSWORD falha e nenhum ambiente novo sobe, mesmo
-# com o `.env` presente na raiz — que é a fonte canônica (ver `.env.example`).
-COMPOSE := docker compose --env-file .env -f infra/docker-compose.yml
+# O `compose.yaml` da raiz sobe o MVP inteiro — PostgreSQL, o job de migration
+# e a API (ADR-016). O `.env` da raiz é a fonte canônica e é resolvido pelo
+# próprio Compose, porque o arquivo agora vive ao lado dele.
+COMPOSE := docker compose
 UV      := uv
 
 .DEFAULT_GOAL := help
@@ -29,8 +28,19 @@ setup: ## Instala o ambiente Python a partir do uv.lock
 
 # --- Infraestrutura local ----------------------------------------------------
 
-up: ## Sobe PostgreSQL, Redis e OTel Collector (aguarda healthchecks)
-	$(COMPOSE) up -d --wait
+up: ## Sobe apenas o PostgreSQL (para rodar a suite a partir do host)
+	$(COMPOSE) up -d --wait postgres
+
+demo: ## Sobe o MVP inteiro em containers: banco, migration e API
+	$(COMPOSE) up --build -d --wait
+	@echo "chat  : http://localhost:8000/dev/chat"
+	@echo "docs  : http://localhost:8000/docs"
+
+build: ## Constroi a imagem da API
+	$(COMPOSE) build
+
+config: ## Valida o compose.yaml
+	$(COMPOSE) config --quiet && echo "compose.yaml valido"
 
 down: ## Derruba os containers preservando os volumes de dados
 	$(COMPOSE) down
@@ -68,34 +78,26 @@ test: test-unit ## Atalho para a suíte rápida (unit)
 test-unit: ## Regras de domínio, sem I/O externo
 	$(UV) run pytest -m unit
 
-# As camadas e2e e evals ainda não possuem testes, porque as SPECs
-# correspondentes não foram implementadas. O pytest retorna 5 quando nada é
-# coletado, o que reprovaria a CI. Toleramos SOMENTE o código 5, e de forma
-# ruidosa: qualquer outro código de saída continua reprovando.
-#
-# ATENÇÃO: esta tolerância deve ser removida assim que a camada correspondente
-# tiver testes — como já foi feito para a integration. Ver H-07 em
-# docs/OPEN-QUESTIONS.md.
-define run_optional_layer
-	@$(UV) run pytest -m $(1) || { code=$$?; \
-		if [ $$code -eq 5 ]; then \
-			echo "AVISO: nenhum teste coletado na camada '$(1)'."; \
-			echo "AVISO: esperado nesta fase do bootstrap. Ver docs/OPEN-QUESTIONS.md (H-07)."; \
-		else exit $$code; fi; }
-endef
+# H-07 fechada para todas as camadas: e2e e evals passaram a ter testes reais
+# com a SPEC-004. A tolerância ao código 5 do pytest — que mascarava coleta
+# vazia — foi removida. Zero testes coletados agora REPROVA em qualquer
+# camada, que é exatamente a proteção que o item pedia.
 
 test-integration: ## Fronteiras de banco e provider (requer `make up`)
 	$(UV) run pytest -m integration
 
-test-e2e: ## Jornadas completas de compra (requer `make up`)
-	$(call run_optional_layer,e2e)
+test-e2e: ## Jornada completa de compra (requer `make up`)
+	$(UV) run pytest -m e2e
 
-evals: ## Comportamento probabilístico do agente
-	$(call run_optional_layer,eval)
+evals: ## Comportamento adversarial do agente (requer `make up`)
+	$(UV) run pytest -m eval
 
 # --- Verificação agregada ----------------------------------------------------
 
-verify: fmt-check lint typecheck test-unit ## Suíte usada por /verify e pela CI
+verify: fmt-check lint typecheck test-unit ## Suite rapida: formato, lint, tipos e unit
+
+verify-all: verify test-integration test-e2e evals ## Suite completa (requer `make up`)
+	@echo "verify-all: OK"
 	@echo "verify: OK"
 
 # --- Banco de dados ----------------------------------------------------------

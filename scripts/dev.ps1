@@ -32,7 +32,7 @@ $ErrorActionPreference = 'Stop'
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $RepoRoot
 
-$ComposeFile = Join-Path $RepoRoot 'infra/docker-compose.yml'
+$ComposeFile = Join-Path $RepoRoot 'compose.yaml'
 
 # O docker compose resolve o `.env` a partir do diretorio do ARQUIVO compose
 # (`infra/`), nao da raiz do repositorio. Sem `--env-file` explicito, a
@@ -48,15 +48,14 @@ function Invoke-Step {
         saida for diferente de zero. Necessario porque o PowerShell nao
         propaga falha de executavel nativo automaticamente.
 
-        -AllowNoTests tolera SOMENTE o codigo 5 do pytest ("nenhum teste
-        coletado"), de forma ruidosa. Qualquer outro codigo continua falhando.
-        Ver H-07 em docs/OPEN-QUESTIONS.md.
+        H-07 fechada: a tolerancia ao codigo 5 do pytest ("nenhum teste
+        coletado") foi removida. As quatro camadas possuem testes reais, e
+        coleta vazia agora REPROVA — que e a protecao que o item pedia.
     #>
     param(
         [Parameter(Mandatory = $true)][string]$Label,
         [Parameter(Mandatory = $true)][string]$Command,
-        [Parameter(Mandatory = $true)][string[]]$CommandArgs,
-        [switch]$AllowNoTests
+        [Parameter(Mandatory = $true)][string[]]$CommandArgs
     )
 
     Write-Host "==> $Label" -ForegroundColor Cyan
@@ -64,12 +63,6 @@ function Invoke-Step {
     $code = $LASTEXITCODE
 
     if ($code -eq 0) { return }
-
-    if ($AllowNoTests -and $code -eq 5) {
-        Write-Host "AVISO: nenhum teste coletado nesta camada." -ForegroundColor Yellow
-        Write-Host "AVISO: esperado nesta fase do bootstrap. Ver docs/OPEN-QUESTIONS.md (H-07)." -ForegroundColor Yellow
-        return
-    }
 
     throw "$Label falhou com codigo $code"
 }
@@ -80,7 +73,8 @@ function Show-Help {
     Write-Host ''
     $rows = @(
         @{ Name = 'setup';            Text = 'Instala o ambiente Python a partir do uv.lock' }
-        @{ Name = 'up';               Text = 'Sobe PostgreSQL, Redis e OTel Collector' }
+        @{ Name = 'up';               Text = 'Sobe apenas o PostgreSQL (suite a partir do host)' }
+        @{ Name = 'demo';             Text = 'Sobe o MVP inteiro em containers (banco, migration, API)' }
         @{ Name = 'down';             Text = 'Derruba os containers preservando volumes' }
         @{ Name = 'logs';             Text = 'Acompanha os logs da infraestrutura local' }
         @{ Name = 'ps';               Text = 'Mostra o estado dos containers' }
@@ -93,7 +87,7 @@ function Show-Help {
         @{ Name = 'test-unit';        Text = 'Regras de dominio, sem I/O externo' }
         @{ Name = 'test-integration'; Text = 'Fronteiras de banco e provider (requer up)' }
         @{ Name = 'test-e2e';         Text = 'Jornadas completas de compra (requer up)' }
-        @{ Name = 'evals';            Text = 'Comportamento probabilistico do agente' }
+        @{ Name = 'evals';            Text = 'Comportamento adversarial do agente (requer up)' }
         @{ Name = 'verify';           Text = 'fmt-check + lint + typecheck + test-unit' }
         @{ Name = 'migrate';          Text = 'Aplica migrations ate head (requer up)' }
         @{ Name = 'migration';        Text = 'Gera migration candidata: migration "descricao"' }
@@ -114,7 +108,15 @@ switch ($Target) {
 
     # `--wait` aguarda os healthchecks: `up` so retorna quando o PostgreSQL
     # aceita conexao, o que evita teste de integracao falhando por corrida.
-    'up' { Invoke-Step 'compose up' 'docker' ($ComposeArgs + @('up', '-d', '--wait')) }
+    'up' { Invoke-Step 'compose up' 'docker' ($ComposeArgs + @('up', '-d', '--wait', 'postgres')) }
+
+    'demo' {
+        # Sobe o MVP inteiro: banco, job de migration e API (ADR-016). Nao
+        # exige Python, uv nem Alembic na maquina.
+        Invoke-Step 'compose up --build' 'docker' ($ComposeArgs + @('up', '--build', '-d', '--wait'))
+        Write-Host 'chat  : http://localhost:8000/dev/chat' -ForegroundColor Cyan
+        Write-Host 'docs  : http://localhost:8000/docs' -ForegroundColor Cyan
+    }
 
     'down' { Invoke-Step 'compose down' 'docker' ($ComposeArgs + @('down')) }
 
@@ -146,11 +148,11 @@ switch ($Target) {
     }
 
     'test-e2e' {
-        Invoke-Step 'pytest -m e2e' 'uv' @('run', 'pytest', '-m', 'e2e') -AllowNoTests
+        Invoke-Step 'pytest -m e2e' 'uv' @('run', 'pytest', '-m', 'e2e')
     }
 
     'evals' {
-        Invoke-Step 'pytest -m eval' 'uv' @('run', 'pytest', '-m', 'eval') -AllowNoTests
+        Invoke-Step 'pytest -m eval' 'uv' @('run', 'pytest', '-m', 'eval')
     }
 
     'verify' {

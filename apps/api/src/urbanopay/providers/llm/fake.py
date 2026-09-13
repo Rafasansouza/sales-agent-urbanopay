@@ -232,8 +232,12 @@ class FakeLLMProvider:
         if not facts:
             return ModelResponse(message=_NO_FACTS.get(context.phase, _DEFAULT_REPLY))
 
-        rendered = [_render(fact) for fact in facts]
-        return ModelResponse(message=" ".join(part for part in rendered if part))
+        rendered = [part for part in (_render(fact) for fact in facts) if part]
+        if not rendered:
+            # Nenhum fato rendeu frase: melhor orientar pela fase do que
+            # devolver uma resposta vazia.
+            return ModelResponse(message=_NO_FACTS.get(context.phase, _DEFAULT_REPLY))
+        return ModelResponse(message=" ".join(rendered))
 
 
 _DEFAULT_REPLY: Final = (
@@ -287,6 +291,15 @@ def _render(fact: TurnFact) -> str:
         return "Enviei um codigo de verificacao. Informe o codigo para continuar."
     if fact.result_type == "AUTHENTICATION_VERIFICATION":
         return "Tudo certo, voce esta autenticado."
+    if fact.result_type == "AUTHENTICATION_STATUS":
+        # Sessão anônima: a jornada para aqui e pede o documento. Sem esta
+        # frase a resposta sairia vazia, e uma resposta vazia é pior que uma
+        # recusa — o cliente não saberia o que fazer.
+        return (
+            ""
+            if data.get("authenticated") is True
+            else "Para continuar preciso te identificar. Informe seu CPF."
+        )
     return ""
 
 

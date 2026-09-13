@@ -155,9 +155,73 @@ jobs:
         run: uv run alembic check
 
       - name: Executar testes de integração
-        # Sem tolerância a coleta vazia: a camada possui testes reais desde a
-        # persistence foundation. Zero testes coletados (exit 5) reprova.
+        # Sem tolerância a coleta vazia: zero testes coletados (exit 5)
+        # reprova. H-07 está fechada para todas as camadas.
         run: uv run pytest -m integration
+
+      - name: Executar jornada E2E
+        # A jornada do PRD §18 inteira, contra PostgreSQL real e providers
+        # falsos. Nenhuma credencial, nenhuma rede externa.
+        run: uv run pytest -m e2e
+
+      - name: Executar evals adversariais
+        # Meta de SPEC-004 §16: zero ação crítica não autorizada. Exigível em
+        # CI porque o provider é determinístico (ADR-010, ADR-015).
+        run: uv run pytest -m eval
+
+  # ---------------------------------------------------------------------------
+  # Empacotamento: o compose e a imagem precisam ser construíveis (ADR-016)
+  # ---------------------------------------------------------------------------
+  # Não entregamos um compose que nunca foi testado. Este job não roda a suíte
+  # dentro dos containers — ele prova que a imagem constrói e que a topologia
+  # é válida, que é o que faz `docker compose up --build` funcionar numa
+  # máquina nova.
+  docker:
+    name: Empacotamento Docker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validar compose.yaml
+        # `--env-file .env.example`: o arquivo versionado precisa ser
+        # suficiente para subir o sistema, sem credencial alguma.
+        run: docker compose --env-file .env.example config --quiet
+
+      - name: Construir a imagem da API
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          push: false
+          load: true
+          tags: urbanopay-api:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Verificar que a imagem nao carrega segredo
+        # Nenhum `.env` dentro da imagem, e nenhuma chave em layer (ADR-015).
+        run: |
+          if docker run --rm --entrypoint sh urbanopay-api:ci -c 'test -f /app/.env'; then
+            echo "ERRO: .env foi copiado para a imagem."
+            exit 1
+          fi
+          echo "imagem sem .env: OK"
+
+      - name: Verificar que a API responde a liveness no container
+        run: |
+          docker run --rm -d --name urbanopay-ci -p 8000:8000             -e APP_ENV=ci -e IDENTITY_HASH_SECRET=ci_only_fictitious             -e POSTGRES_HOST=127.0.0.1 -e POSTGRES_PASSWORD=unused             urbanopay-api:ci
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://localhost:8000/health; then
+              echo "" && echo "liveness OK"
+              docker rm -f urbanopay-ci
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "ERRO: /health nao respondeu."
+          docker logs urbanopay-ci
+          docker rm -f urbanopay-ci
+          exit 1
 
   # ---------------------------------------------------------------------------
   # Segurança: secrets e dependências
