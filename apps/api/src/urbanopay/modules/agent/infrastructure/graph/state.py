@@ -14,12 +14,16 @@ o que foi dito (ADR-014), e o estado do turno morre com o turno.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, TypedDict
+from typing import TypedDict
 
-if TYPE_CHECKING:
-    from urbanopay.modules.agent.domain.conversation import ConversationState
-    from urbanopay.modules.agent.domain.results import ToolResult
-    from urbanopay.providers.llm import TurnUnderstanding
+# Imports em runtime, e não sob `TYPE_CHECKING`: o LangGraph resolve os type
+# hints deste `TypedDict` ao construir o grafo (`get_type_hints`), e nomes
+# disponíveis apenas para o type checker levantariam `NameError` no startup.
+# É uma exigência do framework sobre o **seu** tipo — o `GraphState` —, não um
+# vazamento: quem cruza a fronteira continua sendo `ConversationState`.
+from urbanopay.modules.agent.domain.conversation import ConversationState
+from urbanopay.modules.agent.domain.results import ToolResult
+from urbanopay.providers.llm import TurnUnderstanding
 
 
 class GraphState(TypedDict, total=False):
@@ -45,6 +49,9 @@ class GraphState(TypedDict, total=False):
     Não é derivada do estado conversacional: guardar identidade ali criaria uma
     segunda autoridade, que sobreviveria à expiração da sessão (SPEC-004 §3.1).
     """
+
+    skip_action: bool
+    """O turno já produziu seu efeito fora do grafo (entrada sensível)."""
 
     understanding: TurnUnderstanding
     results: list[ToolResult]

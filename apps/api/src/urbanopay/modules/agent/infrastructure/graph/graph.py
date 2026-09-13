@@ -143,12 +143,19 @@ class LangGraphTurnRunner:
 
     @staticmethod
     def _needs_authentication(state: GraphState) -> str:
-        """Aresta condicional: pular a ação quando a conversa vai pedir CPF.
+        """Aresta condicional: quando **não** há ação a executar neste turno.
 
-        Com a fase já em `AWAITING_DOCUMENT` ou `AWAITING_OTP`, não há o que
-        executar neste turno — a próxima mensagem é que traz o dado, e ela
-        será interceptada antes do modelo.
+        Dois casos, e ambos terminam em resposta direta:
+
+        - a fase já é `AWAITING_DOCUMENT`/`AWAITING_OTP`: a próxima mensagem é
+          que traz o dado, e ela será interceptada antes do modelo;
+        - `skip_action`: o turno **foi** a entrada sensível. O resultado da
+          autenticação já é o desfecho, e reexecutar o playbook sobre
+          `[OTP_REDACTED]` classificaria um marcador como se fosse fala do
+          cliente.
         """
+        if state.get("skip_action"):
+            return _RESPOND
         return _RESPOND if state["conversation"].phase in SENSITIVE_INPUT_PHASES else _ACT
 
     # --- montagem ----------------------------------------------------------
@@ -173,7 +180,12 @@ class LangGraphTurnRunner:
     # --- port --------------------------------------------------------------
 
     async def run(
-        self, *, state: ConversationState, message: str, authenticated: bool = False
+        self,
+        *,
+        state: ConversationState,
+        message: str,
+        authenticated: bool = False,
+        skip_action: bool = False,
     ) -> TurnOutcome:
         """Executa o turno completo e devolve o contrato da aplicação."""
         final = await self._graph.ainvoke(
@@ -181,6 +193,7 @@ class LangGraphTurnRunner:
                 "message": message,
                 "conversation": state,
                 "authenticated": authenticated,
+                "skip_action": skip_action,
                 "results": [],
             }
         )

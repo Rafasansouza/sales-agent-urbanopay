@@ -34,8 +34,15 @@ if TYPE_CHECKING:
 
     from urbanopay.providers.llm.base import TurnFact
 
-# Aceita "R$ 100", "100,00", "100.50", "R$1.234,56".
-_AMOUNT = re.compile(r"r?\$?\s*(\d{1,3}(?:\.\d{3})*,\d{2}|\d+[.,]\d{2}|\d+)\b")
+_NUMBER = r"\d{1,3}(?:\.\d{3})*,\d{2}|\d+[.,]\d{2}|\d+"
+
+# Valor com marcador explícito de dinheiro — "R$ 100", "100,00 reais" — tem
+# prioridade sobre número solto. É o que separa "quero 100 reais" de "o cartao
+# 4821" quando os dois aparecem na mesma frase.
+_AMOUNT_MARKED = re.compile(
+    rf"(?:r\$\s*({_NUMBER})|({_NUMBER})\s*(?:reais|real|conto))",
+)
+_AMOUNT_LOOSE = re.compile(rf"\b({_NUMBER})\b")
 _BUS_LINE = re.compile(r"\b(?:linha\s*)?(\d{3})\b")
 _CARD_HINT = re.compile(r"\b(\d{4})\b")
 
@@ -71,13 +78,22 @@ def _normalize(text: str) -> str:
 def _parse_amount(text: str) -> str | None:
     """Extrai o valor da recarga como string decimal, ou `None`.
 
-    Nunca usa `float` em ponto algum do caminho (ADR-012). A validação de
-    faixa e de escala pertence ao domínio — aqui só se reconhece o número.
+    Duas passadas, e a ordem é o que importa: primeiro um número com marcador
+    explícito de dinheiro ("R$ 100", "100 reais"); só então um número solto.
+    Sem essa prioridade, "o cartao 4821, quero 100 reais" leria 4821 como
+    valor — e um dígito de cartão viraria uma cobrança de quatro mil reais.
+
+    Nunca usa `float` em ponto algum do caminho (ADR-012). A validação de faixa
+    e de escala pertence ao domínio; aqui só se reconhece o número.
     """
-    match = _AMOUNT.search(text)
-    if match is None:
+    marked = _AMOUNT_MARKED.search(text)
+    raw = (marked.group(1) or marked.group(2)) if marked else None
+    if raw is None:
+        loose = _AMOUNT_LOOSE.search(text)
+        raw = loose.group(1) if loose else None
+    if raw is None:
         return None
-    raw = match.group(1)
+
     if "," in raw:
         raw = raw.replace(".", "").replace(",", ".")
     try:
@@ -123,6 +139,13 @@ def _read_confirmation(text: str, context: TurnContext) -> ConfirmationDecision 
     return ConfirmationDecision.AMBIGUOUS
 
 
+# Fases em que a conversa já está dentro de uma recarga. Nelas, uma mensagem
+# com valor ou cartão é continuação da jornada — não o começo de outra. Um
+# modelo real chega à mesma conclusão pelo mesmo caminho: o contexto do turno
+# carrega a fase (`TurnContext`).
+_RECHARGE_PHASES: Final = ("CARD_SELECTION", "QUOTE", "ORDER_CONFIRMATION")
+
+
 def _classify(text: str, context: TurnContext) -> AgentIntent:
     if any(word in text for word in ("saldo", "quanto tenho", "quanto ha no cartao")):
         return AgentIntent.CHECK_BALANCE
@@ -133,6 +156,8 @@ def _classify(text: str, context: TurnContext) -> AgentIntent:
     if any(word in text for word in ("bilhete", "passe diario", "pacote 10", "ticket")):
         return AgentIntent.BUY_TICKET
     if any(word in text for word in ("recarregar", "recarga", "carregar o cartao", "por credito")):
+        return AgentIntent.RECHARGE_CARD
+    if context.phase in _RECHARGE_PHASES:
         return AgentIntent.RECHARGE_CARD
     if any(word in text for word in ("quanto custa", "tarifa", "preco", "custo", "quanto fica")):
         return AgentIntent.CALCULATE_TRIP_COST
@@ -159,7 +184,9 @@ class FakeLLMProvider:
         text = _normalize(message)
         confirmation = _read_confirmation(text, context)
         intent = _classify(text, context)
-        segments = _extract_segments(text)
+        # Segmentos só existem quando a conversa é sobre trajeto: num turno de
+        # recarga, "100.00" não pode virar linha de ônibus.
+        segments = _extract_segments(text) if intent is AgentIntent.CALCULATE_TRIP_COST else []
 
         declared: str | None = None
         if "meia" in text or "estudante" in text:
@@ -167,15 +194,19 @@ class FakeLLMProvider:
         elif "integral" in text or "inteira" in text:
             declared = "INTEGRAL"
 
-        # O valor só é lido quando a conversa é de recarga: um "101" de linha
-        # de ônibus não pode virar R$ 101,00.
-        amount = _parse_amount(text) if intent is AgentIntent.RECHARGE_CARD else None
-
         card_hint: str | None = None
-        if context.authenticated and not segments:
+        if context.authenticated and intent is not AgentIntent.CALCULATE_TRIP_COST:
             hint = _CARD_HINT.search(text)
             if hint is not None:
                 card_hint = hint.group(1)
+
+        # O valor só é lido quando a conversa é de recarga — um "101" de linha
+        # não vira R$ 101,00 — e o texto perde antes os dígitos já consumidos
+        # pelo cartão, que competem pelo mesmo padrão numérico.
+        amount = None
+        if intent is AgentIntent.RECHARGE_CARD:
+            sem_cartao = text.replace(card_hint, " ", 1) if card_hint else text
+            amount = _parse_amount(sem_cartao)
 
         return TurnUnderstanding(
             intent=intent,

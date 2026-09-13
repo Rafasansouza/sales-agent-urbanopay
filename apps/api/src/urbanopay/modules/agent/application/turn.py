@@ -52,12 +52,21 @@ class TurnRunner(Protocol):
     """
 
     async def run(
-        self, *, state: ConversationState, message: str, authenticated: bool = False
+        self,
+        *,
+        state: ConversationState,
+        message: str,
+        authenticated: bool = False,
+        skip_action: bool = False,
     ) -> TurnOutcome:
         """Executa um turno.
 
         `authenticated` é a verdade da sessão de `identity`, relida pelo
         chamador: o estado conversacional não guarda identidade, para que não
         exista uma segunda autoridade sobrevivendo à expiração da sessão.
+
+        `skip_action` indica que o efeito do turno já aconteceu fora do grafo
+        — é o caso da entrada sensível, em que o handler determinístico já
+        consumiu CPF ou OTP e resta apenas compor a resposta.
         """
         ...

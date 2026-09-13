@@ -126,8 +126,10 @@ class TurnPlaybook:
             await self._unavailable_catalog(intent)
         elif intent is AgentIntent.CALCULATE_RECHARGE_NEED:
             await self._unavailable_usage_cost()
-        else:
-            self._phase(ConversationPhase.DISCOVERY)
+        # `GENERAL_TRANSPORT_HELP` e `DISCOVER_PRODUCT` sem catálogo não movem a
+        # fase: uma frase solta no meio da jornada não pode fazer a conversa
+        # esquecer onde estava, e reperguntar o que já foi respondido é
+        # exatamente o que §6 proíbe.
 
     # --- autenticação ------------------------------------------------------
 

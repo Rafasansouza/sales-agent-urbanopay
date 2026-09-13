@@ -16,8 +16,10 @@ from __future__ import annotations
 
 from datetime import timedelta
 from typing import TYPE_CHECKING
+from uuid import uuid4
 
 import sqlalchemy as sa
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from urbanopay.modules.agent.domain.conversation import (
     ConversationPhase,
@@ -26,7 +28,10 @@ from urbanopay.modules.agent.domain.conversation import (
     StoredConversation,
 )
 from urbanopay.modules.agent.domain.errors import ConversationConflictError
-from urbanopay.modules.agent.infrastructure.models import AgentConversationModel
+from urbanopay.modules.agent.infrastructure.models import (
+    AgentConversationModel,
+    AgentTurnRequestModel,
+)
 
 if TYPE_CHECKING:
     from datetime import datetime
@@ -175,3 +180,55 @@ class SqlAlchemyConversationRepository:
             updated_at=now,
             expires_at=expires_at,
         )
+
+
+class SqlAlchemyTurnRequestStore:
+    """Deduplicação do request HTTP de conversa (ADR-014, D-6).
+
+    Preocupação **distinta** das idempotências de negócio. Order, confirmação
+    e cobrança continuam protegidos por keys derivadas de evidência persistida
+    e por constraints de banco, e continuariam protegidos se esta tabela não
+    existisse. O que ela evita é o que aquelas não cobrem: custo de LLM
+    duplicado, contador inflado e duas respostas divergentes para a mesma
+    mensagem.
+
+    Deliberadamente **não** reutiliza `idempotency_records`, que é trilha de
+    auditoria de comando de domínio (A-13): poluí-la com tráfego conversacional
+    degradaria a auditoria financeira.
+    """
+
+    def __init__(self, session_factory: async_sessionmaker[AsyncSession]) -> None:
+        self._session_factory = session_factory
+
+    async def replay(self, *, conversation_id: UUID, request_id: str) -> str | None:
+        """Resposta anterior deste request, se ele já foi processado."""
+        stmt = sa.select(AgentTurnRequestModel.response_body).where(
+            AgentTurnRequestModel.conversation_id == conversation_id,
+            AgentTurnRequestModel.request_id == request_id,
+        )
+        async with self._session_factory() as session:
+            return (await session.execute(stmt)).scalar_one_or_none()
+
+    async def remember(
+        self, *, conversation_id: UUID, request_id: str, response_body: str, now: datetime
+    ) -> None:
+        """Registra a resposta do turno.
+
+        `ON CONFLICT DO NOTHING`: duas entregas concorrentes do mesmo request
+        gravam uma única linha, e a corrida não vira erro — a deduplicação é
+        uma constraint de banco, não uma verificação em memória.
+        """
+        stmt = (
+            pg_insert(AgentTurnRequestModel)
+            .values(
+                id=uuid4(),
+                conversation_id=conversation_id,
+                request_id=request_id,
+                response_body=response_body,
+                created_at=now,
+            )
+            .on_conflict_do_nothing(index_elements=["conversation_id", "request_id"])
+        )
+        async with self._session_factory() as session:
+            await session.execute(stmt)
+            await session.commit()

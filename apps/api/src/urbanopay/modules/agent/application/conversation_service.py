@@ -44,7 +44,6 @@ from urbanopay.modules.identity.domain.errors import (
     SessionExpiredError,
     SessionNotFoundError,
 )
-from urbanopay.modules.orders.domain.enums import OrderStatus
 from urbanopay.modules.orders.domain.errors import (
     OrderNotAccessibleError,
     OrderNotFoundError,
@@ -213,6 +212,9 @@ class ConversationService:
                 state=handled.state,
                 message=handled.redacted_message,
                 authenticated=authenticated,
+                # O efeito do turno já aconteceu: reexecutar o playbook sobre
+                # um marcador de redação trataria `[OTP_REDACTED]` como fala.
+                skip_action=True,
             )
             return TurnOutcome(
                 state=outcome.state,

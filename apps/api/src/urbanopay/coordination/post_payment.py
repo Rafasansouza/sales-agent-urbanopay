@@ -27,7 +27,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from urbanopay.modules.orders.domain.enums import OrderStatus
+from urbanopay.modules.payments.domain.enums import PaymentStatus
 
 if TYPE_CHECKING:
     import uuid
@@ -45,18 +45,23 @@ class PostPaymentCoordinator:
         self._fulfillment = fulfillment
 
     async def on_payment_settled(
-        self, *, order_id: uuid.UUID, order_status: OrderStatus
+        self, *, order_id: uuid.UUID, payment_status: PaymentStatus
     ) -> FulfillmentResult | None:
-        """Entrega, se e somente se o Order convergiu para `PAID`.
+        """Entrega, se e somente se o pagamento foi aprovado.
 
-        Qualquer outro estado é desfecho legítimo de um pagamento que não
-        aprovou — `REJECTED`, `EXPIRED`, `CANCELLED` devolvem o Order a
-        `CONFIRMED` (SPEC-003 §13.2) — e nada há a entregar.
+        O gatilho é `Payment APPROVED`, e não uma leitura do Order, porque
+        `Payment APPROVED ⇒ Order PAID` é aplicado pelo `PaymentService` na
+        **mesma transação** (SPEC-003 §12): consultar o Order aqui seria
+        perguntar de novo algo que já foi decidido e comitado.
 
-        Devolve `None` quando não houve entrega, para que o chamador saiba a
-        diferença entre "não se aplicava" e "entregou".
+        Qualquer outro desfecho é legítimo e não entrega nada — `REJECTED`,
+        `EXPIRED` e `CANCELLED` devolvem o Order a `CONFIRMED` (§13.2), e
+        `CREATED`/`PENDING` ainda não concluíram.
+
+        Devolve `None` quando não houve entrega, para que o chamador distinga
+        "não se aplicava" de "entregou".
         """
-        if order_status is not OrderStatus.PAID:
+        if payment_status is not PaymentStatus.APPROVED:
             return None
         return await self.fulfill(order_id=order_id)
 
