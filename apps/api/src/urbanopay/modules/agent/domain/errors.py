@@ -79,3 +79,30 @@ class ConfirmationContextMismatchError(AgentGuardError):
 
     code = GuardCode.CONFIRMATION_CONTEXT_MISMATCH
     next_action = NextAction.STOP
+
+
+CONVERSATION_CONFLICT = "CONVERSATION_CONFLICT"
+"""Código do conflito de turno concorrente (ADR-014).
+
+**Deliberadamente fora de `GuardCode`.** Os seis códigos de SPEC-004 §20
+descrevem por que uma *invocação de tool* foi recusada, e A-20 fechou esse
+conjunto de propósito. Este conflito acontece na **fronteira do turno**, antes
+ou depois de qualquer tool, e pertence ao contrato de transporte — não ao
+envelope de tool.
+"""
+
+
+class ConversationConflictError(Exception):
+    """Dois turnos concorrentes na mesma conversa (ADR-014, concorrência).
+
+    Levantado quando o `UPDATE ... WHERE version = :carregada` não atinge linha
+    alguma: outro turno gravou primeiro. A escrita perdedora é **descartada** —
+    nunca mesclada. Mesclar dois contextos conversacionais divergentes é
+    exatamente o que produziria a confirmação errada.
+
+    Não tem efeito financeiro: os efeitos de negócio do turno perdedor, se
+    houve algum, já comitaram em transação própria e são protegidos por
+    idempotência e por constraint de banco, não por este código.
+    """
+
+    code = CONVERSATION_CONFLICT

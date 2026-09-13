@@ -28,6 +28,8 @@ verdade** quando o vazamento existir.
 from __future__ import annotations
 
 import ast
+import io
+import tokenize
 from pathlib import Path
 
 import pytest
@@ -263,46 +265,150 @@ def test_nenhum_modulo_de_negocio_importa_o_agente() -> None:
     assert not offenders, f"Módulo de negócio importando o agente: {offenders}"
 
 
+# Colunas que o ADR-014 autoriza em `agent_conversations`. A lista é fechada:
+# acrescentar coluna sem revisar esta constante reprova o teste, que é
+# exatamente a proteção pedida — sem coluna onde caibam, saldo, status, valor
+# monetário e PII não têm caminho para o estado durável.
+ALLOWED_CONVERSATION_COLUMNS = frozenset(
+    {
+        "id",
+        "session_id",
+        "phase",
+        "selected_card_id",
+        "current_quote_id",
+        "current_order_id",
+        "current_payment_id",
+        "pending_confirmation_order_id",
+        "pending_confirmation_presented_at",
+        "version",
+        "created_at",
+        "updated_at",
+        "expires_at",
+    }
+)
+
+# Termos que nenhuma migration pode conter. `agent_conversations` saiu da lista
+# ao ser decidido pelo ADR-014; checkpoint de framework permanece proibido,
+# agora em caráter **permanente**.
+FORBIDDEN_IN_MIGRATIONS = ("checkpoint", "langgraph", "create_all")
+
+
 @pytest.mark.unit
-def test_agente_nao_possui_persistencia_propria() -> None:
-    """Etapa 1 não cria tabela: H-11 exige ADR-014 antes da persistência.
+def test_agente_persiste_apenas_a_conversa() -> None:
+    """ADR-014: o estado conversacional é da aplicação, e só ele é persistido.
 
-    Nenhum model ORM, nenhum repositório e nenhuma migration do agente. O
-    `ConversationState` é efêmero e explicitamente não autoritativo.
+    Substitui a asserção de ausência que valia enquanto H-11 estava aberta. A
+    proibição não sumiu — mudou de alvo: nenhuma tabela de framework, nenhum
+    `create_all`, e a tabela da aplicação com **exatamente** o conjunto de
+    colunas aprovado.
     """
-    assert not (AGENT_ROOT / "infrastructure" / "models.py").exists()
-    assert not (AGENT_ROOT / "infrastructure" / "repositories.py").exists()
+    from urbanopay.modules.agent.infrastructure.models import AgentConversationModel
 
-    # Nenhuma migration cria tabela de conversa ou de checkpoint. A asserção é
-    # sobre o **conteúdo**, e não sobre a lista de revisions: a cadeia cresce
-    # com as próximas SPECs, e a proibição não.
-    proibidos = ("agent_conversation", "conversation_state", "checkpoint", "langgraph")
+    columns = {column.name for column in AgentConversationModel.__table__.columns}
+    assert columns == ALLOWED_CONVERSATION_COLUMNS, (
+        "Colunas de agent_conversations divergem do ADR-014. "
+        f"Sobrando: {columns - ALLOWED_CONVERSATION_COLUMNS}. "
+        f"Faltando: {ALLOWED_CONVERSATION_COLUMNS - columns}."
+    )
+
+    # Nenhuma coluna monetária: a ausência é o controle que impede um valor de
+    # apresentação virar, com o tempo, insumo de decisão (ADR-014).
+    tipos = {str(column.type).upper() for column in AgentConversationModel.__table__.columns}
+    assert not any("NUMERIC" in t or "DECIMAL" in t or "FLOAT" in t for t in tipos), (
+        f"Coluna monetária em agent_conversations: {tipos}"
+    )
+    assert not any("JSON" in t for t in tipos), f"JSONB em agent_conversations: {tipos}"
+
+
+def strip_prose(source: str) -> str:
+    """Devolve o código sem comentários nem literais de string.
+
+    O que se proíbe é o **uso**; a prosa que explica a proibição não é
+    violação dela. Sem esta separação, um docstring dizendo "nenhum
+    `create_all()`" reprovaria o arquivo que justamente o cumpre — mesma
+    disciplina já adotada na varredura de `AsyncSession`.
+    """
+    pieces: list[str] = []
+    for token in tokenize.generate_tokens(io.StringIO(source).readline):
+        if token.type in (tokenize.COMMENT, tokenize.STRING):
+            continue
+        pieces.append(token.string)
+    return " ".join(pieces)
+
+
+@pytest.mark.unit
+def test_nenhuma_migration_cria_schema_de_framework() -> None:
+    """Regra permanente do ADR-014: schema nunca nasce de runtime ou framework.
+
+    A asserção é sobre o **código** das revisions, não sobre a lista delas: a
+    cadeia cresce com as próximas SPECs, e a proibição não.
+    """
     migrations = SRC_ROOT / "db" / "migrations" / "versions"
     offenders = {
         path.name: term
         for path in sorted(migrations.glob("*.py"))
-        for term in proibidos
-        if term in path.read_text(encoding="utf-8").lower() or term in path.name.lower()
+        for term in FORBIDDEN_IN_MIGRATIONS
+        if term in strip_prose(path.read_text(encoding="utf-8")).lower()
     }
-    assert not offenders, f"Migration de estado conversacional antes do ADR-014: {offenders}"
+    assert not offenders, f"Migration criando schema de framework: {offenders}"
 
 
 @pytest.mark.unit
-def test_langgraph_nao_foi_introduzido() -> None:
-    """H-11: nenhum grafo, nenhum checkpointer, nenhuma dependência nova.
+def test_strip_prose_separa_uso_de_documentacao() -> None:
+    """Prova que a varredura acima distingue código de comentário.
 
-    A Etapa 2 depende do ADR-014. Enquanto ele não existir, nem o import é
-    admissível — inclusive porque `setup()` de schema do LangGraph está
-    proibido até lá.
+    Sem este teste, `strip_prose` poderia remover tudo e o teste anterior
+    passaria por vacuidade.
     """
-    offenders = [
-        str(path.relative_to(REPO_ROOT))
-        for path in sorted(SRC_ROOT.glob("**/*.py"))
-        if find_forbidden_imports(
-            path.read_text(encoding="utf-8"), frozenset({"langgraph", "langchain"})
-        )
-    ]
-    assert not offenders, f"LangGraph introduzido antes do ADR-014: {offenders}"
+    documentado = '"""Nunca use create_all()."""\nx = 1  # nem em comentario: create_all\n'
+    usado = "metadata.create_all(engine)\n"
+
+    assert "create_all" not in strip_prose(documentado)
+    assert "create_all" in strip_prose(usado)
+
+
+@pytest.mark.unit
+def test_langgraph_confinado_ao_adaptador() -> None:
+    """ADR-014: trocar de orquestrador não pode custar migração de dados.
+
+    `langgraph`, `langchain` e `openai` são importáveis **apenas** nos
+    adaptadores. Se um deles alcançasse `domain` ou `application`, a fronteira
+    que torna o framework substituível deixaria de existir — e o custo de
+    troca passaria de "reescrever um adaptador" para "migrar o produto".
+    """
+    frameworks = frozenset({"langgraph", "langchain", "openai"})
+    permitidos = (
+        SRC_ROOT / "modules" / "agent" / "infrastructure" / "graph",
+        SRC_ROOT / "providers" / "llm",
+    )
+
+    offenders = {}
+    for path in sorted(SRC_ROOT.glob("**/*.py")):
+        if any(path.is_relative_to(allowed) for allowed in permitidos):
+            continue
+        found = find_forbidden_imports(path.read_text(encoding="utf-8"), frameworks)
+        if found:
+            offenders[str(path.relative_to(REPO_ROOT))] = found
+
+    assert not offenders, f"Framework de orquestração ou SDK fora do adaptador: {offenders}"
+
+
+@pytest.mark.unit
+def test_checkpointer_nativo_nao_foi_adotado() -> None:
+    """ADR-014 rejeita checkpointer durável nativo do LangGraph.
+
+    Duas provas: a dependência não está declarada, e o grafo é compilado sem
+    checkpointer. A segunda importa mais — instalar o pacote seria um acidente
+    reversível; usá-lo transferiria o ownership do schema para o framework.
+    """
+    manifest = (REPO_ROOT / "apps" / "api" / "pyproject.toml").read_text(encoding="utf-8")
+    assert "langgraph-checkpoint-postgres" not in manifest
+
+    grafo = (SRC_ROOT / "modules" / "agent" / "infrastructure" / "graph" / "graph.py").read_text(
+        encoding="utf-8"
+    )
+    assert "checkpointer=" not in grafo, "Grafo compilado com checkpointer (ADR-014 proíbe)"
+    assert "builder.compile()" in grafo
 
 
 @pytest.mark.unit
