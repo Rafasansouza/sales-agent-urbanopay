@@ -1,13 +1,15 @@
 # Questões Abertas
 
 **Projeto:** UrbanoPay Mobilidade
-**Última atualização:** 2026-09-07
+**Última atualização:** 2026-09-08
 **Origem:** análise documental realizada no bootstrap do repositório, atualizada
 pela aceitação do ADR-012, pela persistence foundation, pelas implementações
 das SPEC-001 e SPEC-002, pela correção documental da state machine da
 SPEC-003 (C-01, C-02, A-03, A-09, A-10, A-13), pela implementação da SPEC-005
-(A-16, A-17, A-18) e pela **Etapa 1 da SPEC-004** (A-19, A-20, A-21, e
-atualização de A-05, A-06 e H-11).
+(A-16, A-17, A-18), pela **Etapa 1 da SPEC-004** (A-19, A-20, A-21, e
+atualização de A-05, A-06 e H-11) e pela **aceitação do ADR-014**, que resolve
+H-11 e desbloqueia **arquiteturalmente** a Etapa 2 da SPEC-004 — a introdução
+do LangGraph continua dependendo de **H-05**, que permanece aberta.
 
 Nota de segurança registrada (evolução futura, sem item próprio): a sessão
 mantém o mesmo ID após a autenticação (decisão aprovada para o MVP); rotação
@@ -621,45 +623,61 @@ ADR-013 fixou Python 3.13. As dependências instaladas no bootstrap
 pré-requisito das SPEC-003 e SPEC-004. Incompatibilidade exige novo ADR, não
 alteração silenciosa do ADR-013.
 
-### 🟠 H-11 — Persistência das tabelas internas do LangGraph
+### ✅ H-11 — Persistência das tabelas internas do LangGraph
 
-ADR-002 prefere checkpoints duráveis em PostgreSQL. O checkpointer oficial do
-LangGraph cria e gerencia **as próprias tabelas**, tipicamente por um `setup()`
-executado em runtime, fora do controle de migrations versionadas.
+**Resolvido em 2026-09-08 pelo [ADR-014](adr/ADR-014-agent-state-persistence.md)
+— Persistência do Estado Conversacional do Sales Agent.**
 
-Isso colide com a exigência de CLAUDE.md e ADR-004 de que **toda mudança de
-schema tenha migration versionada**.
+A pergunta original — *"como as tabelas internas do LangGraph são criadas e
+versionadas?"* — carregava uma premissa que não se sustenta: a de que adotar
+LangGraph implica adotar um checkpointer gerenciado pelo framework. Um grafo
+compilado **sem** checkpointer é operação suportada e completa.
 
-O ADR-012 declara explicitamente que governa **apenas as tabelas pertencentes à
-aplicação e ao domínio UrbanoPay**, e deixa esta questão fora do seu escopo.
+**A resolução, portanto, é por dissolução da premissa:** não versionamos
+tabelas internas do LangGraph porque **não utilizaremos checkpointer durável
+nativo no MVP**. A persistência durável do estado conversacional **pertence à
+aplicação** e será versionada por Alembic, como qualquer outra tabela da
+UrbanoPay.
 
-**O que precisa ser decidido:** como as tabelas internas do LangGraph são
-criadas e versionadas — schema separado, adoção pelo Alembic, ou outra
-estratégia.
+Decisão adotada — *application-owned conversational state persistence*:
 
-**Ação obrigatória até lá:** nenhum `setup()` automático de schema do LangGraph
-pode ser introduzido.
+- tabela futura `agent_conversations`, versionada **exclusivamente** por
+  Alembic (ADR-012);
+- LangGraph é runtime de orquestração, **não** proprietário de persistência;
+- **não** serão usados no MVP: tabelas nativas de checkpoint, `.setup()` que
+  altere schema, criação automática de schema por framework, `MemorySaver` como
+  solução de produção, Redis como source of truth, ou JSONB genérico de graph
+  state;
+- `interrupt`/`resume` não são usados: a confirmação é fronteira de turno e a
+  aprovação humana é assíncrona e fora do grafo (A-07).
 
-**Encaminhamento:** exige ADR próprio — **ADR-014** —, **antes** da Etapa 2 da
-SPEC-004 (§22).
+**A proibição que este item impunha vira regra permanente:** nenhum schema é
+criado por runtime ou por framework — nem `setup()`, nem `create_all`, sob nome
+algum.
 
-**Estado em 2026-09-07:** a Etapa 1 da SPEC-004 foi implementada **sem tocar
-nesta questão**: não há LangGraph, não há checkpointer, não existe tabela
-`agent_conversations`, nenhuma migration foi criada e nenhuma dependência foi
-adicionada. A camada determinística de tools não precisa de estado durável, e
-o estado de orquestração usado nos testes é efêmero e explicitamente não
-autoritativo (SPEC-004 §3.1).
+**Relação com ADR-002 (registrada nominalmente no ADR-014):** ADR-002 permanece
+válido para a escolha do LangGraph como runtime de orquestração, para o agente
+único e para grafo/nodes/edges. ADR-014 tem precedência **somente** no tema
+"persistência/checkpoint durável do estado conversacional", e substitui
+qualquer interpretação de ADR-002 que exija checkpointer durável nativo ou
+schema de checkpoint controlado pelo framework. **ADR-002 não foi reescrito.**
 
-Direção arquitetural aprovada para o ADR-014, a ser redigido antes da Etapa 2:
+**Estado da implementação:** nenhuma. O ADR-014 fixa direção e **não cria
+tabela, migration, repositório, grafo ou dependência**.
 
-- o estado conversacional durável **pertence à aplicação**, não ao framework;
-- a persistência é **versionada por Alembic**, como qualquer tabela da
-  UrbanoPay (ADR-012);
-- checkpoint ou estado de framework **nunca** é source of truth de negócio;
-- se a cláusula de ADR-002 sobre checkpoints duráveis for lida como exigência
-  de checkpointer gerenciado diretamente pelo LangGraph, o ADR-014 deve
-  **clarificar ou substituir explicitamente** essa cláusula. O ADR-002 não foi
-  alterado nesta etapa.
+⚠️ **A Etapa 2 da SPEC-004 (§22) está desbloqueada apenas
+arquiteturalmente.** A introdução do LangGraph depende da validação de
+compatibilidade com Python 3.13 registrada em **H-05**, que **permanece
+aberta** e deve ser verificada **antes** de instalar a dependência.
+Incompatibilidade exige novo ADR, não alteração silenciosa do ADR-013.
+
+Itens que o ADR-014 deixou explicitamente adiados, cada um exigindo decisão
+antes da implementação correspondente: contador de turnos para
+`max_turns_per_session` (SPEC-004 §14), mutabilidade de `session_id`, valor do
+TTL da conversa, lugar do código `CONVERSATION_CONFLICT` no contrato de
+transporte, localização do adaptador do grafo, idempotência de
+request/mensagem (Etapa 3), purga física de conversas expiradas e revisão da FK
+para `sessions` caso venha a existir purga de sessões.
 
 ### ✅ A-13 — Ciclo de vida de `IdempotencyRecord` em `IN_PROGRESS`
 

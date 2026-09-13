@@ -87,6 +87,10 @@ Windows). Solução específica do Python 3.13 — rever antes de migrar para 3.
   as respectivas SPECs.
 - A dependência FastAPI "uma sessão por request" — entra com o primeiro
   endpoint que consumir o banco. A API **não** cria engine no startup.
-- Checkpointer do LangGraph — fora do escopo do ADR-012; exige ADR próprio
-  antes da SPEC-004 (H-11). Nenhum `setup()` de schema do LangGraph.
+- Checkpointer do LangGraph — **não será adotado** (ADR-014, que resolveu
+  H-11). O estado conversacional durável pertence à aplicação e usará a tabela
+  `agent_conversations`, versionada por Alembic; ela nasce na Etapa 2 da
+  SPEC-004. Nenhum schema é criado por runtime ou por framework.
+- Tabela `agent_conversations` — direção aprovada em ADR-014; migration ainda
+  não criada.
 - `pgvector` (pacote Python) — adiado até existir consumidor real.

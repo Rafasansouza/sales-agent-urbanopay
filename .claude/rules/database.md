@@ -137,6 +137,14 @@ Regras operacionais da foundation:
   `constraint_name`.
 
 ADR-012 governa **apenas as tabelas da aplicação e do domínio UrbanoPay**. A
-persistência das tabelas internas do LangGraph exige ADR próprio antes da
-SPEC-004 — ver H-11 em `docs/OPEN-QUESTIONS.md`. Até lá, nenhum `setup()`
-automático de schema do LangGraph pode ser introduzido.
+persistência do estado conversacional foi decidida em **ADR-014** (H-11
+resolvida em 2026-09-08): ela **pertence à aplicação**, usará a tabela
+`agent_conversations` e é versionada exclusivamente por Alembic. Nenhum
+checkpointer durável nativo do LangGraph é adotado no MVP.
+
+Regra permanente daí decorrente: **nenhum schema é criado por runtime ou por
+framework** — nem `setup()`, nem `create_all`, sob nome algum.
+
+A tabela ainda **não existe**: ADR-014 fixa direção, e a implementação pertence
+à Etapa 2 da SPEC-004. Quando a migration for criada, ela verifica o head real
+da cadeia antes de definir `down_revision`.

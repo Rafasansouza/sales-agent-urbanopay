@@ -10,7 +10,7 @@ paths:
 # Regra — Sales Agent Runtime
 
 **Documentos obrigatórios:** `docs/specs/SPEC-004-sales-agent-tools.md`,
-ADR-002, ADR-003, ADR-005, ADR-010.
+ADR-002, ADR-003, ADR-005, ADR-010, ADR-014.
 
 Leia a SPEC-004 antes de qualquer alteração neste módulo.
 
@@ -34,20 +34,35 @@ arquitetura de runtime.
 
 ## LangGraph
 
-Fonte: ADR-002.
+Fonte: ADR-002, com ADR-014 tendo precedência no tema **persistência /
+checkpoint durável do estado conversacional**.
 
 - LangGraph orquestra; não implementa regra de negócio.
 - O estado do grafo **não** é source of truth de saldo, tarifa, Order ou
   Payment.
-- Checkpoints são duráveis, preferencialmente em PostgreSQL.
 - Nodes podem ser retomados e reexecutados: **todo side effect é idempotente**.
-- Confirmação do passageiro e aprovação humana podem usar `interrupt`/`resume`.
 - O webhook financeiro **não passa pelo grafo**.
 
-⚠️ **LangGraph não entra antes do ADR-014.** H-11 exige ADR próprio antes da
-Etapa 2 da SPEC-004: nenhum `setup()` de schema, nenhuma tabela de checkpoint,
-nenhuma dependência adicionada, nenhuma tabela `agent_conversations`. A Etapa 1
-é inteiramente determinística e não depende do grafo.
+### Persistência: application-owned (ADR-014)
+
+- O grafo é compilado **sem checkpointer**.
+- O estado conversacional durável **pertence à aplicação**: tabela
+  `agent_conversations`, versionada exclusivamente por Alembic.
+- **Nenhum schema é criado por runtime ou por framework** — nem `setup()`, nem
+  `create_all`, sob nome algum. Regra permanente.
+- **Não** usar: tabelas nativas de checkpoint, `MemorySaver` em produção,
+  Redis como source of truth, JSONB genérico de graph state.
+- **`interrupt`/`resume` não são usados no MVP.** A confirmação do passageiro é
+  fronteira de turno, registrada em `pending_confirmation`; a aprovação humana
+  é assíncrona e ocorre fora do grafo (A-07).
+- Tipos do LangGraph **não vazam** para `domain`, para contratos de
+  `application` nem para o modelo de persistência: o grafo se adapta ao
+  `ConversationState`, não o contrário.
+- `langgraph-checkpoint-postgres` **não** é dependência do projeto.
+
+⚠️ Nada disso está implementado. ADR-014 fixa direção; tabela, migration,
+repositório e grafo pertencem à **Etapa 2** da SPEC-004. A Etapa 1 é
+inteiramente determinística e não depende do grafo.
 
 ## Provider de LLM
 
@@ -167,8 +182,12 @@ Fonte: SPEC-004 §22.
 
 - **Etapa 1 (implementada):** tools, visibilidade, autorização, envelopes,
   presenters, guardas, idempotência, composition root, testes.
-- **Etapa 2 (bloqueada por ADR-014 / H-11):** LangGraph, `LLMProvider`,
-  `FakeLLMProvider`, prompt, limites de §14, evals, persistência conversacional.
+- **Etapa 2 (arquiteturalmente desbloqueada pelo ADR-014, não implementada):**
+  LangGraph, `LLMProvider`, `FakeLLMProvider`, prompt, limites de §14, evals,
+  persistência conversacional.
+  ⚠️ **H-11 está resolvida; H-05 não.** Valide a compatibilidade de
+  `langgraph` com Python 3.13 **antes** de instalar a dependência.
+  Incompatibilidade exige novo ADR, não alteração silenciosa do ADR-013.
 - **Etapa 3:** HTTP de conversa, webhook HTTP, coordenador pós-pagamento
   (SPEC-005 §10.1 / A-19), E2E, canal de OTP de demonstração (H-12).
 
@@ -203,7 +222,19 @@ Nunca são autoridade no state — releia do PostgreSQL antes de operação crí
 sessão a cada operação protegida.
 
 Valor de display que fique no state é marcado como **não autoritativo** e
-jamais participa de decisão.
+jamais participa de decisão. Ele é **valor de turno**: ADR-014 decidiu que
+`display_total` **não é persistido** — na retomada, o total é recomposto
+relendo o Order.
+
+`ConversationPhase` **não é apenas UX** (ADR-014): `AWAITING_DOCUMENT` e
+`AWAITING_OTP` são o que informa ao transporte que a próxima mensagem precisa
+do handler determinístico de §13.1 **antes** do provider. Por isso a fase
+precisa continuar conhecida depois de um restart — é controle de PII.
+
+O estado conversacional **nunca compartilha transação** com Order, Approval,
+Payment, Fulfillment ou saldo de Card. Se o commit de negócio der certo e a
+escrita conversacional falhar, **não existe compensação financeira**: o turno
+seguinte relê o backend e continua de forma idempotente.
 
 ## Limites
 
