@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import pytest
 
-from urbanopay.modules.fare.domain.enums import TransportMode, TripType
-from urbanopay.modules.fare.domain.errors import (
+from urbanopay_domains.fare.domain.enums import TransportMode, TripType
+from urbanopay_domains.fare.domain.errors import (
     EmptyTripError,
     UnsupportedTripCompositionError,
 )
-from urbanopay.modules.fare.domain.services import TripClassifier
-from urbanopay.modules.fare.domain.value_objects import Segment
+from urbanopay_domains.fare.domain.services import TripClassifier
+from urbanopay_domains.fare.domain.value_objects import Segment
 
 
 def bus(line: str) -> Segment:

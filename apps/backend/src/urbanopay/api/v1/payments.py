@@ -21,8 +21,8 @@ from fastapi import APIRouter, Depends, status
 from pydantic import BaseModel, ConfigDict, Field
 
 from urbanopay.api.container import AppContainer
-from urbanopay.api.v1.agent import get_container
-from urbanopay.modules.payments.domain.enums import PaymentStatus, ProviderName
+from urbanopay.api.dependencies import get_container
+from urbanopay_domains.payments.domain.enums import PaymentStatus, ProviderName
 
 router = APIRouter(prefix="/payments", tags=["payments"])
 

@@ -22,10 +22,13 @@ dependencies = ["urbanopay"]
 package = false
 
 [tool.uv.workspace]
-members = ["apps/backend"]
+members = ["apps/database", "apps/domains", "apps/agent", "apps/backend"]
 
 [tool.uv.sources]
 urbanopay = { workspace = true }
+urbanopay-database = { workspace = true }
+urbanopay-domains = { workspace = true }
+urbanopay-agent = { workspace = true }
 
 [dependency-groups]
 dev = [
@@ -47,7 +50,13 @@ dev = [
 [tool.ruff]
 line-length = 100
 target-version = "py313"
-src = ["apps/backend/src", "tests"]
+src = [
+    "apps/database/src",
+    "apps/domains/src",
+    "apps/agent/src",
+    "apps/backend/src",
+    "tests",
+]
 extend-exclude = [".venv", "infra"]
 
 [tool.ruff.lint]
@@ -92,7 +101,13 @@ docstring-code-format = true
 # -----------------------------------------------------------------------------
 [tool.mypy]
 python_version = "3.13"
-files = ["apps/backend/src", "tests"]
+files = [
+    "apps/database/src",
+    "apps/domains/src",
+    "apps/agent/src",
+    "apps/backend/src",
+    "tests",
+]
 warn_unused_configs = true
 warn_redundant_casts = true
 warn_unused_ignores = true
@@ -105,7 +120,7 @@ check_untyped_defs = true
 
 # Modo estrito nos módulos de domínio, conforme ADR-013.
 [[tool.mypy.overrides]]
-module = "urbanopay.*"
+module = ["urbanopay.*", "urbanopay_database.*", "urbanopay_domains.*", "urbanopay_agent.*"]
 disallow_any_generics = true
 disallow_untyped_calls = true
 disallow_untyped_decorators = true

@@ -16,7 +16,7 @@ import pytest_asyncio
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
-from urbanopay.modules.fare.infrastructure.models import FareModel, FareRuleModel
+from urbanopay_domains.fare.infrastructure.models import FareModel, FareRuleModel
 
 
 class FareTestData:

@@ -32,10 +32,10 @@ from urbanopay.core.config import Settings
 
 # A convenção é IMPORTADA da produção — nunca copiada — para que teste e
 # produção não possam divergir (ADR-012).
-from urbanopay.db.base import NAMING_CONVENTION
-from urbanopay.db.engine import create_engine_from_settings
-from urbanopay.db.session import create_session_factory
-from urbanopay.db.unit_of_work import SqlAlchemyUnitOfWork
+from urbanopay_database.base import NAMING_CONVENTION
+from urbanopay_database.engine import create_engine_from_settings
+from urbanopay_database.session import create_session_factory
+from urbanopay_database.unit_of_work import SqlAlchemyUnitOfWork
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -47,7 +47,7 @@ def alembic_config() -> AlembicConfig:
     cfg = AlembicConfig(str(REPO_ROOT / "alembic.ini"))
     cfg.set_main_option(
         "script_location",
-        str(REPO_ROOT / "apps" / "backend" / "src" / "urbanopay" / "db" / "migrations"),
+        str(REPO_ROOT / "apps" / "backend" / "src" / "urbanopay" / "migrations"),
     )
     return cfg
 

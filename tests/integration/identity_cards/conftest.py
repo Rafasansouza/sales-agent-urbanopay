@@ -21,18 +21,18 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from tests.unit.identity.fakes import FakeOtpGenerator
 from urbanopay.core.config import Settings
-from urbanopay.modules.cards.infrastructure.models import CardModel
-from urbanopay.modules.identity.application.services import (
+from urbanopay_domains.cards.infrastructure.models import CardModel
+from urbanopay_domains.identity.application.services import (
     AuthenticationService,
     SessionService,
 )
-from urbanopay.modules.identity.domain.value_objects import IdentityHasher
-from urbanopay.modules.identity.infrastructure.models import (
+from urbanopay_domains.identity.domain.value_objects import IdentityHasher
+from urbanopay_domains.identity.infrastructure.models import (
     AuthChallengeModel,
     CustomerModel,
     SessionModel,
 )
-from urbanopay.modules.identity.infrastructure.uow import SqlAlchemyIdentityUnitOfWork
+from urbanopay_domains.identity.infrastructure.uow import SqlAlchemyIdentityUnitOfWork
 
 FIXED_NOW = datetime(2026, 9, 7, 12, 0, 0, tzinfo=UTC)
 FIXED_OTP = "123456"

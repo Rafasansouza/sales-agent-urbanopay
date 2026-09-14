@@ -29,16 +29,23 @@ WORKDIR /app
 
 # Primeiro só os manifestos: esta camada é reaproveitada enquanto as
 # dependências não mudarem.
+# Os manifestos dos quatro pacotes do workspace (ADR-017). O README acompanha
+# cada um: os `pyproject.toml` o declaram em `readme`, e o hatchling falha o
+# build sem ele.
 COPY pyproject.toml uv.lock ./
-# O README acompanha o manifesto: `apps/backend/pyproject.toml` o declara em
-# `readme`, e o hatchling falha o build sem ele.
-COPY apps/backend/pyproject.toml apps/backend/README.md apps/backend/
+COPY apps/database/pyproject.toml apps/database/README.md apps/database/
+COPY apps/domains/pyproject.toml  apps/domains/README.md  apps/domains/
+COPY apps/agent/pyproject.toml    apps/agent/README.md    apps/agent/
+COPY apps/backend/pyproject.toml  apps/backend/README.md  apps/backend/
 
-# `--no-install-project` instala apenas as dependências; o pacote da aplicação
-# entra no passo seguinte, junto com o código.
+# `--no-install-project` instala apenas as dependências de terceiros; os pacotes
+# da aplicação entram no passo seguinte, junto com o código.
 RUN uv sync --frozen --no-dev --no-install-project
 
-COPY apps/backend/src apps/backend/src
+COPY apps/database/src apps/database/src
+COPY apps/domains/src  apps/domains/src
+COPY apps/agent/src    apps/agent/src
+COPY apps/backend/src  apps/backend/src
 COPY alembic.ini ./
 
 RUN uv sync --frozen --no-dev

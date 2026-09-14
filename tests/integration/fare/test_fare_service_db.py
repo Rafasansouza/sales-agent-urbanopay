@@ -11,14 +11,14 @@ import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from tests.unit.fare.fakes import FIXED_NOW
-from urbanopay.modules.fare.application.services import FareService, SegmentInput
-from urbanopay.modules.fare.domain.enums import TripType
-from urbanopay.modules.fare.domain.errors import (
+from urbanopay_domains.fare.application.services import FareService, SegmentInput
+from urbanopay_domains.fare.domain.enums import TripType
+from urbanopay_domains.fare.domain.errors import (
     FareLineNotFoundError,
     FareNotAvailableError,
 )
-from urbanopay.modules.fare.infrastructure.models import FareModel, FareRuleModel
-from urbanopay.modules.fare.infrastructure.repositories import (
+from urbanopay_domains.fare.infrastructure.models import FareModel, FareRuleModel
+from urbanopay_domains.fare.infrastructure.repositories import (
     SqlAlchemyFareRepository,
     SqlAlchemyFareRuleRepository,
 )

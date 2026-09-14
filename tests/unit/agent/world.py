@@ -38,25 +38,25 @@ from tests.unit.orders_payments.fakes import (
     FakePaymentsUnitOfWork,
     Store,
 )
-from urbanopay.modules.agent.domain.conversation import ConversationState
-from urbanopay.modules.agent.infrastructure.composition import AgentServices
-from urbanopay.modules.cards.application.services import CardService
-from urbanopay.modules.cards.domain.enums import CardStatus, FareProfile
-from urbanopay.modules.fare.application.services import FareService
-from urbanopay.modules.fulfillment.application.services import FulfillmentService
-from urbanopay.modules.identity.application.services import (
+from urbanopay.providers.payments.fake import FakePaymentProvider
+from urbanopay_agent.domain.conversation import ConversationState
+from urbanopay_agent.infrastructure.composition import AgentServices
+from urbanopay_domains.cards.application.services import CardService
+from urbanopay_domains.cards.domain.enums import CardStatus, FareProfile
+from urbanopay_domains.fare.application.services import FareService
+from urbanopay_domains.fulfillment.application.services import FulfillmentService
+from urbanopay_domains.identity.application.services import (
     AuthenticationService,
     SessionService,
 )
-from urbanopay.modules.identity.domain.entities import Session
-from urbanopay.modules.orders.application.services import OrderService, QuoteService
-from urbanopay.modules.orders.domain.policies import ApprovalPolicy
-from urbanopay.modules.payments.application.services import PaymentService
-from urbanopay.providers.payments.fake import FakePaymentProvider
+from urbanopay_domains.identity.domain.entities import Session
+from urbanopay_domains.orders.application.services import OrderService, QuoteService
+from urbanopay_domains.orders.domain.policies import ApprovalPolicy
+from urbanopay_domains.payments.application.services import PaymentService
 
 if TYPE_CHECKING:
-    from urbanopay.modules.cards.domain.entities import Card
-    from urbanopay.modules.identity.domain.entities import Customer
+    from urbanopay_domains.cards.domain.entities import Card
+    from urbanopay_domains.identity.domain.entities import Customer
 
 FIXED_NOW = datetime(2026, 9, 7, 12, 0, 0, tzinfo=UTC)
 SESSION_TTL = timedelta(minutes=30)

@@ -30,9 +30,9 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, ConfigDict
 
 from urbanopay.api.container import AppContainer
+from urbanopay.api.dependencies import get_container
 from urbanopay.api.dev.seed import DEMO_DATASET, seed_demo_dataset
-from urbanopay.api.v1.agent import get_container
-from urbanopay.modules.payments.domain.enums import PaymentStatus
+from urbanopay_domains.payments.domain.enums import PaymentStatus
 
 router = APIRouter(tags=["dev"])
 

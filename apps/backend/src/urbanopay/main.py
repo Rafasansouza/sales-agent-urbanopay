@@ -23,9 +23,9 @@ from urbanopay.api.container import build_container
 from urbanopay.api.v1.router import api_v1_router
 from urbanopay.core.config import Settings, get_settings
 from urbanopay.core.errors import AppError
-from urbanopay.core.event_loop import ensure_selector_event_loop_policy
 from urbanopay.core.logging import configure_logging
 from urbanopay.core.telemetry import configure_telemetry
+from urbanopay_database.event_loop import ensure_selector_event_loop_policy
 
 logger = logging.getLogger(__name__)
 

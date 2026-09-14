@@ -24,27 +24,27 @@ from tests.unit.fulfillment.builders import (
     make_receipt,
 )
 from tests.unit.fulfillment.fakes import FakeFulfillmentUnitOfWork, Store
-from urbanopay.modules.cards.domain.enums import CardStatus
-from urbanopay.modules.fulfillment.application.services import FulfillmentService
-from urbanopay.modules.fulfillment.domain.enums import (
+from urbanopay_domains.cards.domain.enums import CardStatus
+from urbanopay_domains.fulfillment.application.services import FulfillmentService
+from urbanopay_domains.fulfillment.domain.enums import (
     DocumentKind,
     FailureClass,
     FulfillmentStatus,
     LedgerEntryType,
 )
-from urbanopay.modules.fulfillment.domain.errors import (
+from urbanopay_domains.fulfillment.domain.errors import (
     EffectConflictError,
     FulfillmentNotFoundError,
     OrderNotPaidError,
     ReceiptNotAvailableError,
     ReconciliationRequiredError,
 )
-from urbanopay.modules.orders.domain.enums import OrderStatus
-from urbanopay.modules.orders.domain.errors import (
+from urbanopay_domains.orders.domain.enums import OrderStatus
+from urbanopay_domains.orders.domain.errors import (
     OrderNotAccessibleError,
     OrderNotFoundError,
 )
-from urbanopay.modules.payments.domain.enums import PaymentStatus
+from urbanopay_domains.payments.domain.enums import PaymentStatus
 
 CUSTOMER = uuid.UUID("00000000-0000-4000-8000-0000000000c1")
 OTHER_CUSTOMER = uuid.UUID("00000000-0000-4000-8000-0000000000c2")

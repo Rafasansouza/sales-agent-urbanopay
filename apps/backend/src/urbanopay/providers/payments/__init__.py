@@ -3,7 +3,7 @@
 Fonte: ADR-007.
 
 A porta `PaymentProvider` vive em
-`urbanopay.modules.payments.domain.ports` — o domínio declara o que precisa, e
+`urbanopay_domains.payments.domain.ports` — o domínio declara o que precisa, e
 este pacote reúne as implementações.
 
 Estado atual:

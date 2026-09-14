@@ -29,13 +29,13 @@ from typing import TYPE_CHECKING, Final, NamedTuple
 
 import sqlalchemy as sa
 
-from urbanopay.modules.cards.infrastructure.models import CardModel
-from urbanopay.modules.identity.infrastructure.models import CustomerModel
+from urbanopay_domains.cards.infrastructure.models import CardModel
+from urbanopay_domains.identity.infrastructure.models import CustomerModel
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-    from urbanopay.modules.identity.domain.value_objects import IdentityHasher
+    from urbanopay_domains.identity.domain.value_objects import IdentityHasher
 
 
 class DemoCard(NamedTuple):

@@ -11,8 +11,8 @@ from decimal import Decimal
 
 import pytest
 
-from urbanopay.modules.orders.domain.enums import OperationType
-from urbanopay.modules.orders.domain.policies import (
+from urbanopay_domains.orders.domain.enums import OperationType
+from urbanopay_domains.orders.domain.policies import (
     DEFAULT_APPROVAL_THRESHOLD,
     ApprovalPolicy,
 )

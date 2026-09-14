@@ -13,14 +13,14 @@ from datetime import UTC, datetime
 from types import TracebackType
 from typing import Self
 
-from urbanopay.modules.identity.domain.entities import Customer, OTPChallenge, Session
-from urbanopay.modules.identity.domain.enums import ChallengeStatus, CustomerStatus
-from urbanopay.modules.identity.domain.ports import (
+from urbanopay_domains.identity.domain.entities import Customer, OTPChallenge, Session
+from urbanopay_domains.identity.domain.enums import ChallengeStatus, CustomerStatus
+from urbanopay_domains.identity.domain.ports import (
     AuthChallengeRepository,
     CustomerRepository,
     SessionRepository,
 )
-from urbanopay.modules.identity.domain.value_objects import IdentityHasher
+from urbanopay_domains.identity.domain.value_objects import IdentityHasher
 
 FIXED_NOW = datetime(2026, 9, 7, 12, 0, 0, tzinfo=UTC)
 

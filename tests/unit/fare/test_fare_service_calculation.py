@@ -21,9 +21,9 @@ from tests.unit.fare.fakes import (
     make_rule,
     official_fares,
 )
-from urbanopay.modules.fare.application.services import FareService, SegmentInput
-from urbanopay.modules.fare.domain.enums import FareProfile, TransportMode, TripType
-from urbanopay.modules.fare.domain.errors import (
+from urbanopay_domains.fare.application.services import FareService, SegmentInput
+from urbanopay_domains.fare.domain.enums import FareProfile, TransportMode, TripType
+from urbanopay_domains.fare.domain.errors import (
     BusLineRequiredError,
     EmptyTripError,
     FareLineNotFoundError,

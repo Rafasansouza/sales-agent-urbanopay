@@ -17,7 +17,9 @@ from enum import StrEnum
 from functools import lru_cache
 
 from pydantic import Field, SecretStr
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import SettingsConfigDict
+
+from urbanopay_database.config import DatabaseSettings
 
 
 class AppEnv(StrEnum):
@@ -49,8 +51,13 @@ class PaymentProviderName(StrEnum):
     MERCADOPAGO = "mercadopago"
 
 
-class Settings(BaseSettings):
-    """Configuração carregada de variáveis de ambiente e de `.env`."""
+class Settings(DatabaseSettings):
+    """Configuração da aplicação.
+
+    **Herda** `DatabaseSettings` (ADR-017): os campos `POSTGRES_*` têm uma
+    definição só, no pacote mais baixo, e o backend acrescenta o que é dele —
+    aplicação, identidade, pedidos, agente, LLM, pagamento e telemetria.
+    """
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -64,17 +71,8 @@ class Settings(BaseSettings):
     app_name: str = "urbanopay-api"
     log_level: str = "INFO"
 
-    # --- PostgreSQL (ADR-004, ADR-012) ---
-    # Fonte canônica de configuração do banco. A URL do SQLAlchemy é derivada
-    # destes campos por `urbanopay.db.engine.build_database_url`; não existe
-    # uma segunda fonte de verdade em forma de DATABASE_URL.
-    postgres_host: str = "localhost"
-    postgres_port: int = 5432
-    postgres_db: str = "urbanopay"
-    postgres_user: str = "urbanopay"
-    # SecretStr: nunca aparece em repr, log ou trace. Sem default utilizável —
-    # o valor vem do ambiente ou do `.env` local.
-    postgres_password: SecretStr = SecretStr("")
+    # PostgreSQL vem de `DatabaseSettings` (ADR-017): definido uma única vez,
+    # no pacote mais baixo.
 
     # --- Identity & Cards (SPEC-002) ---
     # Segredo do HMAC usado para derivar identificadores de lookup (CPF) e

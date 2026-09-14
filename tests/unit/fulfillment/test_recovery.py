@@ -24,12 +24,12 @@ from tests.unit.fulfillment.fakes import (
     FakeFulfillmentUnitOfWork,
     Store,
 )
-from urbanopay.modules.fulfillment.application.services import (
+from urbanopay_domains.fulfillment.application.services import (
     FulfillmentRecoveryService,
     FulfillmentService,
 )
-from urbanopay.modules.fulfillment.domain.enums import FulfillmentStatus
-from urbanopay.modules.orders.domain.enums import OrderStatus
+from urbanopay_domains.fulfillment.domain.enums import FulfillmentStatus
+from urbanopay_domains.orders.domain.enums import OrderStatus
 
 CUSTOMER = uuid.UUID("00000000-0000-4000-8000-0000000000c1")
 

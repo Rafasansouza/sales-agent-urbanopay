@@ -22,27 +22,27 @@ from dataclasses import dataclass, field, replace
 from decimal import Decimal
 from typing import TYPE_CHECKING, Self
 
-from urbanopay.modules.fulfillment.domain.enums import LedgerEntryType
+from urbanopay_domains.fulfillment.domain.enums import LedgerEntryType
 
 if TYPE_CHECKING:
     from datetime import datetime
 
-    from urbanopay.modules.cards.domain.entities import Card
-    from urbanopay.modules.cards.domain.ports import CardBalanceRepository
-    from urbanopay.modules.fulfillment.domain.entities import (
+    from urbanopay_domains.cards.domain.entities import Card
+    from urbanopay_domains.cards.domain.ports import CardBalanceRepository
+    from urbanopay_domains.fulfillment.domain.entities import (
         CardLedgerEntry,
         Fulfillment,
         Receipt,
     )
-    from urbanopay.modules.fulfillment.domain.ports import (
+    from urbanopay_domains.fulfillment.domain.ports import (
         CardLedgerRepository,
         FulfillmentRepository,
         ReceiptRepository,
     )
-    from urbanopay.modules.orders.domain.entities import Order
-    from urbanopay.modules.orders.domain.ports import OrderRepository
-    from urbanopay.modules.payments.domain.entities import Payment
-    from urbanopay.modules.payments.domain.ports import PaymentRepository
+    from urbanopay_domains.orders.domain.entities import Order
+    from urbanopay_domains.orders.domain.ports import OrderRepository
+    from urbanopay_domains.payments.domain.entities import Payment
+    from urbanopay_domains.payments.domain.ports import PaymentRepository
 
 
 @dataclass
@@ -128,7 +128,7 @@ class FakePaymentRepository:
         return None
 
     async def get_approved_for_order(self, order_id: uuid.UUID) -> Payment | None:
-        from urbanopay.modules.payments.domain.enums import PaymentStatus
+        from urbanopay_domains.payments.domain.enums import PaymentStatus
 
         for payment in self._state.payments.values():
             if payment.order_id == order_id and payment.status is PaymentStatus.APPROVED:
@@ -293,7 +293,7 @@ class FakeFulfillmentRecoveryPort:
     async def find_paid_orders_without_completed_fulfillment(
         self, *, limit: int
     ) -> list[uuid.UUID]:
-        from urbanopay.modules.orders.domain.enums import OrderStatus
+        from urbanopay_domains.orders.domain.enums import OrderStatus
 
         elegiveis = {
             OrderStatus.PAID,

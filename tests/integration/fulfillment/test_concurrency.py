@@ -17,8 +17,8 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from tests.integration.fulfillment.conftest import LATER, FulfillmentTestData
-from urbanopay.modules.fulfillment.application.services import FulfillmentService
-from urbanopay.modules.fulfillment.infrastructure.uow import (
+from urbanopay_domains.fulfillment.application.services import FulfillmentService
+from urbanopay_domains.fulfillment.infrastructure.uow import (
     SqlAlchemyFulfillmentUnitOfWork,
 )
 
@@ -108,7 +108,7 @@ async def test_orders_distintos_do_mesmo_cartao_creditam_os_dois(
 
     import sqlalchemy as sa
 
-    from urbanopay.modules.orders.infrastructure.models import OrderModel
+    from urbanopay_domains.orders.infrastructure.models import OrderModel
 
     primeiro = await data.add_scenario(total=Decimal("30.00"), balance=Decimal("0.00"))
     segundo = await data.add_scenario(total=Decimal("20.00"), balance=Decimal("0.00"))

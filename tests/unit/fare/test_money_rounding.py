@@ -18,9 +18,9 @@ from tests.unit.fare.fakes import (
     make_fare,
     make_rule,
 )
-from urbanopay.modules.fare.application.services import FareService, SegmentInput
-from urbanopay.modules.fare.domain.enums import FareProfile, TransportMode
-from urbanopay.modules.fare.domain.value_objects import percentage_of, to_money
+from urbanopay_domains.fare.application.services import FareService, SegmentInput
+from urbanopay_domains.fare.domain.enums import FareProfile, TransportMode
+from urbanopay_domains.fare.domain.value_objects import percentage_of, to_money
 
 
 @pytest.mark.unit

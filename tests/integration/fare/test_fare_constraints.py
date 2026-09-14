@@ -16,7 +16,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from tests.integration.fare.conftest import FareTestData
-from urbanopay.modules.fare.infrastructure.models import FareModel, FareRuleModel
+from urbanopay_domains.fare.infrastructure.models import FareModel, FareRuleModel
 
 # Janela futura que nunca cruza a vigência dos dados sintéticos históricos.
 FUTURE_2030 = datetime(2030, 1, 1, tzinfo=UTC)

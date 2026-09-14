@@ -1,0 +1,34 @@
+# =============================================================================
+# apps/domains — fronteiras de negócio (ADR-001, ADR-017)
+# =============================================================================
+# As sete fronteiras de ADR-001 com implementação, cada uma com `domain/`,
+# `application/` e `infrastructure/`.
+#
+# Depende **somente** de `urbanopay-database`. Não conhece o agente, não conhece
+# a camada HTTP e não conhece configuração de aplicação — um domínio existe sem
+# a conversa, e precisa continuar existindo.
+#
+# O Alembic mora aqui porque as migrations são das tabelas do negócio.
+# =============================================================================
+
+[project]
+name = "urbanopay-domains"
+version = "0.1.0"
+description = "Fronteiras de negócio da UrbanoPay Mobilidade"
+readme = "README.md"
+requires-python = ">=3.13,<3.14"
+
+dependencies = [
+    "urbanopay-database",
+    "sqlalchemy[asyncio]>=2.0",
+    "psycopg[binary]>=3.2",
+    "alembic>=1.14",
+    "pydantic>=2.10",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/urbanopay_domains"]

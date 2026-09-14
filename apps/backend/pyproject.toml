@@ -1,5 +1,12 @@
 # =============================================================================
-# apps/backend — backend FastAPI da UrbanoPay Mobilidade
+# apps/backend — aplicação FastAPI e composition root (ADR-006, ADR-017)
+# =============================================================================
+# O que não é do agente: app FastAPI, composition root, sondas de saúde, webhook
+# de pagamento, superfície de demonstração, coordenador pós-pagamento e provider
+# de pagamento.
+#
+# É o **topo** da direção `database ← domains ← agent ← backend`: só ele conhece
+# todos, e por isso só ele monta.
 # =============================================================================
 # Membro do workspace uv declarado na raiz. A configuração de Ruff, mypy e
 # pytest é compartilhada e vive no `pyproject.toml` da raiz (ADR-013).
@@ -17,17 +24,18 @@ readme = "README.md"
 requires-python = ">=3.13,<3.14"
 
 dependencies = [
+    # Os três pacotes internos, na direção única do ADR-017.
+    "urbanopay-database",
+    "urbanopay-domains",
+    "urbanopay-agent",
     # Camada HTTP (ADR-006).
     "fastapi>=0.115",
     "uvicorn[standard]>=0.34",
     # Contratos tipados e configuração por ambiente (ADR-006).
     "pydantic>=2.10",
     "pydantic-settings>=2.7",
-    "sqlalchemy[asyncio]>=2.0",
-    "psycopg[binary]>=3.2",
+    # Alembic: o `migrate` do Compose roda a partir desta imagem.
     "alembic>=1.14",
-    "langgraph>=1.2,<2",
-    "openai>=1.60",
 ]
 
 # Dependências deliberadamente ausentes:

@@ -22,29 +22,30 @@ from typing import TYPE_CHECKING
 
 from urbanopay.coordination import PostPaymentCoordinator
 from urbanopay.core.config import PaymentProviderName, Settings
-from urbanopay.db.engine import create_engine_from_settings
-from urbanopay.db.session import create_session_factory
-from urbanopay.modules.agent.application.conversation_service import ConversationService
-from urbanopay.modules.agent.application.executor import ToolExecutor
-from urbanopay.modules.agent.infrastructure.composition import build_agent_services
-from urbanopay.modules.agent.infrastructure.graph import LangGraphTurnRunner
-from urbanopay.modules.agent.infrastructure.repositories import (
+from urbanopay.providers.payments.fake import FakePaymentProvider
+from urbanopay_agent.api import ConversationGateway
+from urbanopay_agent.application.conversation_service import ConversationService
+from urbanopay_agent.application.executor import ToolExecutor
+from urbanopay_agent.infrastructure.composition import build_agent_services
+from urbanopay_agent.infrastructure.graph import LangGraphTurnRunner
+from urbanopay_agent.infrastructure.repositories import (
     SqlAlchemyConversationRepository,
     SqlAlchemyTurnRequestStore,
 )
-from urbanopay.modules.identity.domain.value_objects import IdentityHasher
-from urbanopay.modules.identity.infrastructure.dev_otp import DevOtpSink, RecordingOtpGenerator
-from urbanopay.modules.identity.infrastructure.otp import SecretsOtpGenerator
-from urbanopay.modules.payments.application.services import PaymentService
-from urbanopay.modules.payments.infrastructure.uow import SqlAlchemyPaymentsUnitOfWork
-from urbanopay.providers.llm import build_llm_provider
-from urbanopay.providers.payments.fake import FakePaymentProvider
+from urbanopay_agent.llm import build_llm_provider
+from urbanopay_database.engine import create_engine_from_settings
+from urbanopay_database.session import create_session_factory
+from urbanopay_domains.identity.domain.value_objects import IdentityHasher
+from urbanopay_domains.identity.infrastructure.dev_otp import DevOtpSink, RecordingOtpGenerator
+from urbanopay_domains.identity.infrastructure.otp import SecretsOtpGenerator
+from urbanopay_domains.payments.application.services import PaymentService
+from urbanopay_domains.payments.infrastructure.uow import SqlAlchemyPaymentsUnitOfWork
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
-    from urbanopay.modules.agent.infrastructure.composition import AgentServices
-    from urbanopay.modules.payments.domain.ports import PaymentProvider
+    from urbanopay_agent.infrastructure.composition import AgentServices
+    from urbanopay_domains.payments.domain.ports import PaymentProvider
 
 
 @dataclass(frozen=True, slots=True)
@@ -66,6 +67,16 @@ class AppContainer:
 
     async def dispose(self) -> None:
         await self.engine.dispose()
+
+    def conversation_gateway(self) -> ConversationGateway:
+        """O que o router do agente alcança.
+
+        O backend decide de onde vem cada colaborador; o agente apenas declarou
+        que precisa deles (ADR-017).
+        """
+        return ConversationGateway(
+            conversations=self.conversations, turn_requests=self.turn_requests
+        )
 
 
 def _build_payment_provider(settings: Settings) -> PaymentProvider:
@@ -103,18 +114,28 @@ def build_container(settings: Settings | None = None) -> AppContainer:
 
     payment_provider = _build_payment_provider(resolved)
 
+    # Os valores de política chegam como valores, não como `Settings`: a camada
+    # conversacional não conhece a configuração da aplicação (ADR-017).
     services = build_agent_services(
         session_factory,
-        settings=resolved,
         hasher=hasher,
         otp_generator=otp_generator,
         payment_provider=payment_provider,
+        session_ttl_minutes=resolved.session_ttl_minutes,
+        otp_ttl_minutes=resolved.otp_ttl_minutes,
+        otp_max_attempts=resolved.otp_max_attempts,
+        quote_ttl_minutes=resolved.quote_ttl_minutes,
+        order_draft_ttl_minutes=resolved.order_draft_ttl_minutes,
     )
 
     executor = ToolExecutor(services, max_tool_calls_per_turn=resolved.max_tool_calls_per_turn)
     runner = LangGraphTurnRunner(
         executor=executor,
-        llm=build_llm_provider(resolved),
+        llm=build_llm_provider(
+            provider=resolved.llm_provider.value,
+            api_key=resolved.openai_api_key.get_secret_value(),
+            model=resolved.openai_model,
+        ),
         max_llm_calls_per_turn=resolved.max_llm_calls_per_turn,
     )
 

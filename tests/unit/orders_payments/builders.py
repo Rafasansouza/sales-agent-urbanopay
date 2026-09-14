@@ -10,17 +10,17 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
-from urbanopay.modules.approvals.domain.entities import Approval
-from urbanopay.modules.approvals.domain.enums import ApprovalStatus
-from urbanopay.modules.orders.domain.entities import LineItem, Order, Quote
-from urbanopay.modules.orders.domain.enums import (
+from urbanopay_domains.approvals.domain.entities import Approval
+from urbanopay_domains.approvals.domain.enums import ApprovalStatus
+from urbanopay_domains.orders.domain.entities import LineItem, Order, Quote
+from urbanopay_domains.orders.domain.enums import (
     CURRENCY_BRL,
     CancellationReason,
     OperationType,
     OrderStatus,
 )
-from urbanopay.modules.payments.domain.entities import Payment
-from urbanopay.modules.payments.domain.enums import (
+from urbanopay_domains.payments.domain.entities import Payment
+from urbanopay_domains.payments.domain.enums import (
     PaymentMethod,
     PaymentStatus,
     ProviderName,

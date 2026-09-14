@@ -19,8 +19,8 @@ from uuid import uuid4
 import sqlalchemy as sa
 
 from urbanopay.core.config import Settings
-from urbanopay.db.engine import build_database_url
-from urbanopay.modules.cards.infrastructure.models import CardModel
+from urbanopay_database.engine import build_database_url
+from urbanopay_domains.cards.infrastructure.models import CardModel
 
 if TYPE_CHECKING:
     from fastapi.testclient import TestClient

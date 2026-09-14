@@ -19,14 +19,14 @@ from tests.unit.fare.fakes import (
     make_rule,
     official_fares,
 )
-from urbanopay.modules.cards.application.services import CardService
-from urbanopay.modules.cards.domain.enums import CardStatus, FareProfile, FareProfileSource
-from urbanopay.modules.cards.domain.errors import CardNotAccessibleError, CardNotActiveError
-from urbanopay.modules.cards.domain.value_objects import (
+from urbanopay_domains.cards.application.services import CardService
+from urbanopay_domains.cards.domain.enums import CardStatus, FareProfile, FareProfileSource
+from urbanopay_domains.cards.domain.errors import CardNotAccessibleError, CardNotActiveError
+from urbanopay_domains.cards.domain.value_objects import (
     ProfileSignal,
     detect_profile_divergence,
 )
-from urbanopay.modules.fare.application.services import FareService, SegmentInput
+from urbanopay_domains.fare.application.services import FareService, SegmentInput
 
 MARIANA = uuid.UUID("00000000-0000-4000-8000-0000000000a1")
 LUCAS = uuid.UUID("00000000-0000-4000-8000-0000000000a2")

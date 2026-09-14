@@ -5,6 +5,9 @@ requires-python = "==3.13.*"
 [manifest]
 members = [
     "urbanopay",
+    "urbanopay-agent",
+    "urbanopay-database",
+    "urbanopay-domains",
     "urbanopay-monorepo",
 ]
 
@@ -1005,12 +1008,11 @@ source = { editable = "apps/backend" }
 dependencies = [
     { name = "alembic" },
     { name = "fastapi" },
-    { name = "langgraph" },
-    { name = "openai" },
-    { name = "psycopg", extra = ["binary"] },
     { name = "pydantic" },
     { name = "pydantic-settings" },
-    { name = "sqlalchemy", extra = ["asyncio"] },
+    { name = "urbanopay-agent" },
+    { name = "urbanopay-database" },
+    { name = "urbanopay-domains" },
     { name = "uvicorn", extra = ["standard"] },
 ]
 
@@ -1018,13 +1020,75 @@ dependencies = [
 requires-dist = [
     { name = "alembic", specifier = ">=1.14" },
     { name = "fastapi", specifier = ">=0.115" },
+    { name = "pydantic", specifier = ">=2.10" },
+    { name = "pydantic-settings", specifier = ">=2.7" },
+    { name = "urbanopay-agent", editable = "apps/agent" },
+    { name = "urbanopay-database", editable = "apps/database" },
+    { name = "urbanopay-domains", editable = "apps/domains" },
+    { name = "uvicorn", extras = ["standard"], specifier = ">=0.34" },
+]
+
+[[package]]
+name = "urbanopay-agent"
+version = "0.1.0"
+source = { editable = "apps/agent" }
+dependencies = [
+    { name = "fastapi" },
+    { name = "langgraph" },
+    { name = "openai" },
+    { name = "pydantic" },
+    { name = "urbanopay-database" },
+    { name = "urbanopay-domains" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "fastapi", specifier = ">=0.115" },
     { name = "langgraph", specifier = ">=1.2,<2" },
     { name = "openai", specifier = ">=1.60" },
+    { name = "pydantic", specifier = ">=2.10" },
+    { name = "urbanopay-database", editable = "apps/database" },
+    { name = "urbanopay-domains", editable = "apps/domains" },
+]
+
+[[package]]
+name = "urbanopay-database"
+version = "0.1.0"
+source = { editable = "apps/database" }
+dependencies = [
+    { name = "psycopg", extra = ["binary"] },
+    { name = "pydantic" },
+    { name = "pydantic-settings" },
+    { name = "sqlalchemy", extra = ["asyncio"] },
+]
+
+[package.metadata]
+requires-dist = [
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2" },
     { name = "pydantic", specifier = ">=2.10" },
     { name = "pydantic-settings", specifier = ">=2.7" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0" },
-    { name = "uvicorn", extras = ["standard"], specifier = ">=0.34" },
+]
+
+[[package]]
+name = "urbanopay-domains"
+version = "0.1.0"
+source = { editable = "apps/domains" }
+dependencies = [
+    { name = "alembic" },
+    { name = "psycopg", extra = ["binary"] },
+    { name = "pydantic" },
+    { name = "sqlalchemy", extra = ["asyncio"] },
+    { name = "urbanopay-database" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "alembic", specifier = ">=1.14" },
+    { name = "psycopg", extras = ["binary"], specifier = ">=3.2" },
+    { name = "pydantic", specifier = ">=2.10" },
+    { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0" },
+    { name = "urbanopay-database", editable = "apps/database" },
 ]
 
 [[package]]

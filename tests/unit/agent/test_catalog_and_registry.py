@@ -11,8 +11,8 @@ import inspect
 
 import pytest
 
-from urbanopay.modules.agent.application import registry, schemas
-from urbanopay.modules.agent.domain.catalog import (
+from urbanopay_agent.application import registry, schemas
+from urbanopay_agent.domain.catalog import (
     BACKEND_ONLY_TOOLS,
     TOOL_VISIBILITY,
     UNAVAILABLE_TOOLS,

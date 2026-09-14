@@ -12,8 +12,8 @@ from decimal import Decimal
 import pytest
 
 from tests.unit.fare.fakes import FIXED_NOW
-from urbanopay.modules.fare.domain.enums import FareProfile, TransportMode, TripType
-from urbanopay.modules.fare.domain.value_objects import (
+from urbanopay_domains.fare.domain.enums import FareProfile, TransportMode, TripType
+from urbanopay_domains.fare.domain.value_objects import (
     AppliedDiscount,
     CalculatedSegment,
     FareCalculation,

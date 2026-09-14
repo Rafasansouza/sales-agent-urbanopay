@@ -19,9 +19,9 @@ import itertools
 import uuid
 from typing import TYPE_CHECKING
 
-from urbanopay.modules.payments.domain.entities import ProviderCharge
-from urbanopay.modules.payments.domain.enums import PaymentStatus, ProviderName
-from urbanopay.modules.payments.domain.errors import (
+from urbanopay_domains.payments.domain.entities import ProviderCharge
+from urbanopay_domains.payments.domain.enums import PaymentStatus, ProviderName
+from urbanopay_domains.payments.domain.errors import (
     PaymentCreationFailedError,
     PaymentProviderTimeoutError,
 )

@@ -22,13 +22,13 @@ from tests.integration.identity_cards.conftest import (
     build_services,
 )
 from urbanopay.core.config import Settings
-from urbanopay.db.engine import create_engine_from_settings
-from urbanopay.db.session import create_session_factory
-from urbanopay.modules.identity.application.services import AuthenticationService
-from urbanopay.modules.identity.domain.errors import AuthenticationChallengeNotFoundError
-from urbanopay.modules.identity.domain.results import VerificationResult, VerificationStatus
-from urbanopay.modules.identity.domain.value_objects import IdentityHasher
-from urbanopay.modules.identity.infrastructure.models import AuthChallengeModel, SessionModel
+from urbanopay_database.engine import create_engine_from_settings
+from urbanopay_database.session import create_session_factory
+from urbanopay_domains.identity.application.services import AuthenticationService
+from urbanopay_domains.identity.domain.errors import AuthenticationChallengeNotFoundError
+from urbanopay_domains.identity.domain.results import VerificationResult, VerificationStatus
+from urbanopay_domains.identity.domain.value_objects import IdentityHasher
+from urbanopay_domains.identity.infrastructure.models import AuthChallengeModel, SessionModel
 
 
 @pytest_asyncio.fixture

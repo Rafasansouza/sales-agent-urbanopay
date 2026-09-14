@@ -14,16 +14,16 @@ from datetime import UTC, datetime
 import pytest
 
 from tests.unit.agent.world import AgentWorld, other_customer_card
-from urbanopay.modules.agent.application.executor import (
+from urbanopay_agent.application.executor import (
     DEFAULT_MAX_TOOL_CALLS_PER_TURN,
     ToolExecutor,
 )
-from urbanopay.modules.agent.domain.catalog import ToolCaller
-from urbanopay.modules.agent.domain.conversation import (
+from urbanopay_agent.domain.catalog import ToolCaller
+from urbanopay_agent.domain.conversation import (
     ConversationState,
     PendingConfirmation,
 )
-from urbanopay.modules.agent.domain.results import GuardCode, NextAction, ResultType
+from urbanopay_agent.domain.results import GuardCode, NextAction, ResultType
 
 FIXED_NOW = datetime(2026, 9, 7, 12, 0, 0, tzinfo=UTC)
 

@@ -24,16 +24,16 @@ from tests.integration.orders_payments.conftest import (
     TTL,
     OrdersPaymentsTestData,
 )
-from urbanopay.modules.approvals.infrastructure.models import ApprovalModel
-from urbanopay.modules.orders.application.services import OrderService, QuoteService
-from urbanopay.modules.orders.domain.enums import OrderStatus
-from urbanopay.modules.orders.domain.policies import ApprovalPolicy
-from urbanopay.modules.orders.infrastructure.uow import SqlAlchemyOrdersUnitOfWork
-from urbanopay.modules.payments.application.services import PaymentService
-from urbanopay.modules.payments.domain.enums import PaymentStatus, ProviderName
-from urbanopay.modules.payments.infrastructure.models import PaymentModel
-from urbanopay.modules.payments.infrastructure.uow import SqlAlchemyPaymentsUnitOfWork
 from urbanopay.providers.payments.fake import FakePaymentProvider
+from urbanopay_domains.approvals.infrastructure.models import ApprovalModel
+from urbanopay_domains.orders.application.services import OrderService, QuoteService
+from urbanopay_domains.orders.domain.enums import OrderStatus
+from urbanopay_domains.orders.domain.policies import ApprovalPolicy
+from urbanopay_domains.orders.infrastructure.uow import SqlAlchemyOrdersUnitOfWork
+from urbanopay_domains.payments.application.services import PaymentService
+from urbanopay_domains.payments.domain.enums import PaymentStatus, ProviderName
+from urbanopay_domains.payments.infrastructure.models import PaymentModel
+from urbanopay_domains.payments.infrastructure.uow import SqlAlchemyPaymentsUnitOfWork
 
 
 def _orders(session_factory: async_sessionmaker[AsyncSession]) -> OrderService:

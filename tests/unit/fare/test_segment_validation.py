@@ -4,14 +4,14 @@ from __future__ import annotations
 
 import pytest
 
-from urbanopay.modules.fare.domain.enums import FareProfile, TransportMode
-from urbanopay.modules.fare.domain.errors import (
+from urbanopay_domains.fare.domain.enums import FareProfile, TransportMode
+from urbanopay_domains.fare.domain.errors import (
     BusLineRequiredError,
     InvalidFareProfileError,
     InvalidSegmentStructureError,
     InvalidTransportModeError,
 )
-from urbanopay.modules.fare.domain.value_objects import (
+from urbanopay_domains.fare.domain.value_objects import (
     Segment,
     parse_fare_profile,
     parse_transport_mode,

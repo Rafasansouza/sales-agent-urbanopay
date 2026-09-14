@@ -7,13 +7,13 @@ from datetime import timedelta
 import pytest
 
 from tests.unit.identity.fakes import FIXED_NOW, FakeIdentityUnitOfWork, make_customer
-from urbanopay.modules.identity.application.services import SessionService
-from urbanopay.modules.identity.domain.errors import (
+from urbanopay_domains.identity.application.services import SessionService
+from urbanopay_domains.identity.domain.errors import (
     NotAuthenticatedError,
     SessionExpiredError,
     SessionNotFoundError,
 )
-from urbanopay.modules.identity.domain.services import authenticate_session
+from urbanopay_domains.identity.domain.services import authenticate_session
 
 TTL = timedelta(minutes=30)
 

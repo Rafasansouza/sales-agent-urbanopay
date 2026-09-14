@@ -27,13 +27,13 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from urbanopay.modules.payments.domain.enums import PaymentStatus
+from urbanopay_domains.payments.domain.enums import PaymentStatus
 
 if TYPE_CHECKING:
     import uuid
 
-    from urbanopay.modules.fulfillment.application.services import FulfillmentService
-    from urbanopay.modules.fulfillment.domain.results import FulfillmentResult
+    from urbanopay_domains.fulfillment.application.services import FulfillmentService
+    from urbanopay_domains.fulfillment.domain.results import FulfillmentResult
 
 logger = logging.getLogger(__name__)
 
