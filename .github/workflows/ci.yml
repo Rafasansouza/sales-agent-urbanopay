@@ -182,10 +182,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Validar compose.yaml
-        # `--env-file .env.example`: o arquivo versionado precisa ser
-        # suficiente para subir o sistema, sem credencial alguma.
-        run: docker compose --env-file .env.example config --quiet
+      - name: Validar compose.yaml pelo caminho documentado
+        # Exatamente o que o runbook manda fazer num clone novo. Se
+        # `.env.example` deixar de ser suficiente para subir o sistema sem
+        # credencial, este passo reprova.
+        run: |
+          cp .env.example .env
+          docker compose config --quiet
+          echo "compose.yaml valido a partir do .env.example"
+
+      - name: Verificar que o .env de teste nao vaza para a imagem
+        run: rm -f .env
 
       - name: Construir a imagem da API
         uses: docker/build-push-action@v6

@@ -68,7 +68,12 @@ services:
     pull_policy: never
     restart: "no"
     env_file:
-      - .env
+      # `required: false`: valida e sobe sem o arquivo, deixando o ambiente do
+      # shell responder. Quem esquecer o `cp .env.example .env` recebe a
+      # mensagem explícita da interpolação de POSTGRES_PASSWORD, e não um erro
+      # obscuro de arquivo ausente.
+      - path: .env
+        required: false
     environment:
       POSTGRES_HOST: postgres
       POSTGRES_PORT: "5432"
@@ -90,7 +95,8 @@ services:
     # `env_file` é o único caminho pelo qual a credencial entra: em runtime,
     # nunca em build, nunca em layer (ADR-015).
     env_file:
-      - .env
+      - path: .env
+        required: false
     environment:
       POSTGRES_HOST: postgres
       POSTGRES_PORT: "5432"
