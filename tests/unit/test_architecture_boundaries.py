@@ -30,6 +30,7 @@ from __future__ import annotations
 import ast
 import io
 import tokenize
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -401,8 +402,23 @@ def test_checkpointer_nativo_nao_foi_adotado() -> None:
     checkpointer. A segunda importa mais — instalar o pacote seria um acidente
     reversível; usá-lo transferiria o ownership do schema para o framework.
     """
-    manifest = (REPO_ROOT / "apps" / "api" / "pyproject.toml").read_text(encoding="utf-8")
-    assert "langgraph-checkpoint-postgres" not in manifest
+    # Varre as dependências **declaradas**, não o texto do arquivo: o
+    # comentário que documenta a proibição não é violação dela — mesma
+    # disciplina de `strip_prose`.
+    manifest = tomllib.loads(
+        (REPO_ROOT / "apps" / "api" / "pyproject.toml").read_text(encoding="utf-8")
+    )
+    declaradas = [
+        requisito
+        for grupo in (
+            manifest["project"].get("dependencies", []),
+            *manifest["project"].get("optional-dependencies", {}).values(),
+        )
+        for requisito in grupo
+    ]
+    assert not [dep for dep in declaradas if "langgraph-checkpoint-postgres" in dep], declaradas
+    # E a asserção não é vácua: `langgraph` em si **está** declarado.
+    assert [dep for dep in declaradas if dep.startswith("langgraph")]
 
     grafo = (SRC_ROOT / "modules" / "agent" / "infrastructure" / "graph" / "graph.py").read_text(
         encoding="utf-8"

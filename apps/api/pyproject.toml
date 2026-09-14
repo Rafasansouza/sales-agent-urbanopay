@@ -30,16 +30,15 @@ dependencies = [
     "openai>=1.60",
 ]
 
-# Dependências deliberadamente ausentes nesta fase:
+# Dependências deliberadamente ausentes:
 #
-#   - SQLAlchemy 2.x, psycopg 3 e Alembic: decididos em ADR-012 (Aceito), mas
-#     a persistência ainda não foi implementada — serão adicionados na tarefa
-#     de implementação, junto com o uv.lock correspondente;
-#   - langgraph e SDK de LLM: SPEC-004 não foi implementada e a
-#     compatibilidade com Python 3.13 ainda não foi validada (ver H-05 em
-#     docs/OPEN-QUESTIONS.md);
-#   - SDK do Mercado Pago: SPEC-003 não foi implementada;
-#   - OpenTelemetry e Langfuse: a instrumentação acompanha as SPECs.
+#   - langgraph-checkpoint-postgres: ADR-014 rejeita checkpointer durável
+#     nativo. O estado conversacional pertence à aplicação e é versionado por
+#     Alembic. Um teste de arquitetura reprova a presença deste pacote;
+#   - SDK do Mercado Pago: exige credencial de teste que não existe.
+#     FakePaymentProvider é o sandbox do MVP (ADR-007);
+#   - OpenTelemetry e Langfuse: a instrumentação acompanha ADR-008, e o modo
+#     de implantação do Langfuse segue aberto (H-04).
 
 [build-system]
 requires = ["hatchling"]
