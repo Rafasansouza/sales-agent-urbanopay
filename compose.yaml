@@ -16,9 +16,11 @@
 # sem credencial externa.
 #
 # Serviços deliberadamente ausentes (ADR-016): Redis, porque não existe
-# consumidor no código; OTel Collector, porque a telemetria está desligada por
-# padrão; e container web separado, porque a página de demonstração é servida
-# pela própria API e assim jamais recebe a credencial do provider.
+# consumidor no código; e OTel Collector, porque a telemetria está desligada
+# por padrão.
+#
+# O `web` recebe **somente** a URL interna da API. Ele não vê `OPENAI_API_KEY`,
+# e não precisa: quem fala com o provider é a API Python (ADR-011, ADR-015).
 # =============================================================================
 
 name: urbanopay
@@ -113,6 +115,29 @@ services:
       timeout: 3s
       start_period: 15s
       retries: 5
+    networks: [urbanopay]
+
+  # ---------------------------------------------------------------------------
+  # Frontend — Next.js App Router (ADR-011)
+  # ---------------------------------------------------------------------------
+  web:
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile
+    image: urbanopay-web:local
+    restart: unless-stopped
+    environment:
+      # Variável **de servidor**: sem prefixo `NEXT_PUBLIC_`, ela nunca entra no
+      # bundle. O browser fala com o Next; o Next fala com a API.
+      URBANOPAY_API_URL: http://api:8000
+      # Painel de demonstração: liquidação do sandbox e canal do OTP. Deixe
+      # `false` para ver a interface como um cliente a veria.
+      URBANOPAY_DEMO_TOOLS: ${URBANOPAY_DEMO_TOOLS:-true}
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    depends_on:
+      api:
+        condition: service_healthy
     networks: [urbanopay]
 
 volumes:

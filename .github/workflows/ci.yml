@@ -170,6 +170,55 @@ jobs:
         run: uv run pytest -m eval
 
   # ---------------------------------------------------------------------------
+  # Frontend: tipos, lint e build (ADR-011)
+  # ---------------------------------------------------------------------------
+  # Job próprio, e não uma etapa do job de qualidade: o monorepo passou a ter
+  # duas toolchains — `uv` para Python, `npm` para o frontend — e misturá-las
+  # num job só faria uma falha de uma parecer falha da outra.
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/frontend/package-lock.json
+
+      - name: Instalar dependências
+        # `npm ci` instala estritamente a partir do lockfile — o equivalente ao
+        # `--frozen` do uv.
+        run: npm ci --no-audit --no-fund
+
+      - name: Verificação de tipos
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+      - name: Verificar que nenhum segredo entrou no bundle
+        # `NEXT_PUBLIC_*` vai para o bundle por construção. Nenhuma credencial
+        # pode ter esse prefixo, e a URL interna da API também não (ADR-011).
+        run: |
+          if grep -rlE "NEXT_PUBLIC_(OPENAI|MERCADOPAGO|LANGFUSE|IDENTITY|POSTGRES)" .                --include="*.ts" --include="*.tsx" --exclude-dir=node_modules --exclude-dir=.next; then
+            echo "ERRO: credencial exposta em variavel publica de build."
+            exit 1
+          fi
+          if grep -rl "OPENAI_API_KEY" .next/static 2>/dev/null; then
+            echo "ERRO: chave encontrada no bundle."
+            exit 1
+          fi
+          echo "nenhum segredo no bundle: OK"
+
+  # ---------------------------------------------------------------------------
   # Empacotamento: o compose e a imagem precisam ser construíveis (ADR-016)
   # ---------------------------------------------------------------------------
   # Não entregamos um compose que nunca foi testado. Este job não roda a suíte
@@ -193,6 +242,15 @@ jobs:
 
       - name: Verificar que o .env de teste nao vaza para a imagem
         run: rm -f .env
+
+      - name: Construir a imagem do frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/frontend/Dockerfile
+          push: false
+          load: true
+          tags: urbanopay-web:ci
 
       - name: Construir a imagem da API
         uses: docker/build-push-action@v6

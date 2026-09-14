@@ -26,12 +26,13 @@ fecha antes do grafo começar, e a escrita abre depois de ele terminar.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 from uuid import UUID
 
 from urbanopay_agent.application import sensitive_input
+from urbanopay_agent.application.panel import TurnPanel, build_panel
 from urbanopay_agent.application.reconciliation import reconcile
 from urbanopay_agent.application.turn import TurnOutcome
 from urbanopay_agent.domain.conversation import (
@@ -78,6 +79,13 @@ class ConversationTurn:
     reply: str
     code: str | None
     next_action: str | None
+    panel: TurnPanel = field(default_factory=TurnPanel)
+    """Fatos que a interface exibe — Pix, pedido, comprovante.
+
+    Copiados do envelope de tool, nunca derivados da prosa: extrair um valor de
+    dinheiro de uma frase daria ao frontend a responsabilidade de interpretar,
+    que é justamente o que ADR-005 tira dele.
+    """
 
 
 class ConversationService:
@@ -127,6 +135,7 @@ class ConversationService:
             reply=outcome.reply,
             code=outcome.last_code,
             next_action=outcome.next_action.value if outcome.next_action else None,
+            panel=build_panel(outcome.results),
         )
 
     # --- etapas ------------------------------------------------------------

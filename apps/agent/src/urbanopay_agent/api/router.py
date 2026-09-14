@@ -17,7 +17,7 @@ partir de fatos já sanitizados pelos presenters.
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Protocol
 from uuid import UUID
@@ -78,6 +78,52 @@ class MessageRequest(BaseModel):
     )
 
 
+class OrderPanelSchema(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    order_id: str
+    status: str
+    total: str
+    currency: str
+    requires_approval: bool
+
+
+class PixPanelSchema(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    payment_id: str
+    status: str
+    amount: str
+    currency: str
+    qr_code: str | None = None
+
+
+class ReceiptPanelSchema(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    receipt_id: str
+    amount: str
+    currency: str
+    masked_card: str
+    document_kind: str
+    issued_at: str
+
+
+class PanelSchema(BaseModel):
+    """Fatos exibíveis do turno.
+
+    Valor monetário é **string decimal** (ADR-006): ele existe para ser exibido,
+    nunca somado. O frontend não calcula nada a partir daqui.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    order: OrderPanelSchema | None = None
+    pix: PixPanelSchema | None = None
+    receipt: ReceiptPanelSchema | None = None
+    fulfillment_status: str | None = None
+
+
 class MessageResponse(BaseModel):
     """Resposta de um turno."""
 
@@ -89,6 +135,7 @@ class MessageResponse(BaseModel):
     message: str
     code: str | None = None
     next_action: str | None = None
+    panel: PanelSchema = PanelSchema()
 
 
 def _now() -> datetime:
@@ -180,6 +227,7 @@ def build_agent_router(provider: Callable[..., ConversationGateway]) -> APIRoute
             message=turn.reply,
             code=turn.code,
             next_action=turn.next_action,
+            panel=PanelSchema.model_validate(asdict(turn.panel)),
         ).model_dump(mode="json")
 
         if payload.request_id:
