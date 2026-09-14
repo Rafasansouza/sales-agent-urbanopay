@@ -202,8 +202,10 @@ jobs:
           push: false
           load: true
           tags: urbanopay-api:ci
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # Sem cache do GitHub Actions: `cache-to: type=gha` exige o driver
+          # `docker-container`, e `load: true` exige o driver `docker` — os
+          # dois não coexistem. Carregar a imagem importa mais que economizar
+          # minutos, porque é o que permite provar que ela sobe de verdade.
 
       - name: Verificar que a imagem nao carrega segredo
         # Nenhum `.env` dentro da imagem, e nenhuma chave em layer (ADR-015).
