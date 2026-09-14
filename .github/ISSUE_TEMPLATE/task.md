@@ -50,12 +50,12 @@ Consulte docs/OPEN-QUESTIONS.md. Bloqueios conhecidos hoje:
 - A-06 — calculate_usage_cost sem especificação
 - A-07 — interface de aprovação humana sem especificação
 - A-08 — stack do frontend sem ADR (ADR-011 Proposta)
-- H-05 — compatibilidade de langgraph com Python 3.13 não validada; verificar
-  antes de instalar a dependência (Etapa 2 da SPEC-004)
+- A-18 — resolução administrativa de "pago e não entregável"
+- H-05 (parcial) — SDK do Mercado Pago não validado; FakePaymentProvider é o
+  sandbox do MVP
 
-Resolvida em 2026-09-08: H-11, pelo ADR-014 (persistência do estado
-conversacional pertence à aplicação; sem checkpointer nativo do LangGraph).
-A Etapa 2 fica arquiteturalmente desbloqueada — H-05 continua valendo.
+Resolvidas: H-11 (ADR-014), H-05 na parte langgraph, H-07, H-12 e a
+implementação de A-19, todas com a conclusão da SPEC-004.
 -->
 
 ## Fora de escopo

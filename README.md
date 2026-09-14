@@ -7,8 +7,14 @@ simulados.
 > O modelo de linguagem decide o que dizer. O código decide o que pode ser
 > feito.
 
-**Estado:** bootstrap. A estrutura de engenharia e o Agent Harness estão no
-lugar; **nenhuma regra de negócio foi implementada**.
+**Estado:** MVP executável ponta a ponta. A jornada de venda do PRD §18 —
+conversa em linguagem natural, cálculo tarifário, autenticação, recarga,
+pagamento Pix em sandbox, entrega e comprovante — roda com `git clone` +
+`docker compose up --build`.
+
+Fora do caminho feliz, por decisão registrada: compra de bilhete (A-05),
+recomendação de valor de recarga (A-06) e superfície administrativa de
+aprovação (A-07). Ver [limitações conhecidas](#limitações-conhecidas).
 
 ---
 
@@ -48,6 +54,7 @@ A documentação é a fonte de verdade de engenharia. Leia antes de implementar.
 | [`docs/adr/`](docs/adr/) | Decisões arquiteturais |
 | [`docs/agent-harness/AGENT-HARNESS.md`](docs/agent-harness/AGENT-HARNESS.md) | Modelo de governança do desenvolvimento |
 | [`docs/OPEN-QUESTIONS.md`](docs/OPEN-QUESTIONS.md) | Conflitos, lacunas e ambiguidades conhecidos |
+| [`docs/MVP-DEMO-RUNBOOK.md`](docs/MVP-DEMO-RUNBOOK.md) | **Como executar e demonstrar o MVP do zero** |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | Fluxo de trabalho e convenções |
 
 Autoridade: `PRD → SPEC → ADR → Agent Harness → Implementação`.
@@ -60,8 +67,8 @@ silenciosamente.
 |---|---|---|
 | [SPEC-001](docs/specs/SPEC-001-fare-engine.md) | Fare Engine | **Implementada** |
 | [SPEC-002](docs/specs/SPEC-002-cards-identity.md) | Cards & Identity | **Implementada** |
-| [SPEC-003](docs/specs/SPEC-003-orders-payments.md) | Orders & Payments | Não implementada |
-| [SPEC-004](docs/specs/SPEC-004-sales-agent-tools.md) | Sales Agent & Tools | Não implementada |
+| [SPEC-003](docs/specs/SPEC-003-orders-payments.md) | Orders & Payments | **Implementada** (escopo `RECHARGE`) |
+| [SPEC-004](docs/specs/SPEC-004-sales-agent-tools.md) | Sales Agent & Tools | **Implementada** (A-05/A-06 fora do escopo) |
 | [SPEC-005](docs/specs/SPEC-005-fulfillment-post-sale.md) | Fulfillment & Post-Sale | Implementada (escopo `RECHARGE`) |
 | — | Catalog & Products | **Inexistente** (ver A-05) |
 
@@ -83,6 +90,8 @@ silenciosamente.
 | [012](docs/adr/ADR-012-persistence-orm-migrations.md) | Persistência, ORM e migrations | Aceito |
 | [013](docs/adr/ADR-013-python-toolchain.md) | Toolchain Python | Aceito |
 | [014](docs/adr/ADR-014-agent-state-persistence.md) | Persistência do estado conversacional do agente | Aceito |
+| [015](docs/adr/ADR-015-openai-llm-provider.md) | Provider de LLM do MVP: OpenAI | Aceito |
+| [016](docs/adr/ADR-016-docker-packaging.md) | Empacotamento e execução local em Docker | Aceito |
 
 ---
 
@@ -125,13 +134,15 @@ Prompt é orientação, nunca segurança.
 | Backend | Python 3.13 + FastAPI + Pydantic | ADR-006, ADR-013 |
 | Runtime do agente | LangGraph | ADR-002 |
 | Source of truth | PostgreSQL + pgvector | ADR-004 |
-| Persistência | SQLAlchemy 2.x + psycopg 3 + Alembic (decidido; não implementado) | ADR-012 |
-| Estado efêmero | Redis | ADR-009 |
+| Persistência | SQLAlchemy 2.x + psycopg 3 + Alembic | ADR-012 |
+| Estado conversacional | `agent_conversations`, da aplicação — sem checkpointer de framework | ADR-014 |
+| Estado efêmero | Redis — **sem consumidor ainda**, fora do Compose | ADR-009, ADR-016 |
 | Pagamento | Mercado Pago sandbox, Pix | ADR-007 |
 | Observabilidade | OpenTelemetry + Langfuse | ADR-008 |
-| LLM | Claude Sonnet 5 atrás de abstração de provider | ADR-010 |
+| LLM | OpenAI atrás do port `LLMProvider`; `FakeLLMProvider` em CI | ADR-010, ADR-015 |
 | Ferramentas | uv, Ruff, mypy, pytest | ADR-013 |
-| Frontend | **não decidido** | ADR-011 (Proposta) |
+| Frontend | **não decidido**; a demo é uma página dev-only servida pela API | ADR-011 (Proposta), ADR-016 |
+| Empacotamento | Docker Compose: PostgreSQL, job de migration e API | ADR-016 |
 
 ### Estrutura do repositório
 
@@ -140,8 +151,9 @@ urbanopay/
 ├── apps/
 │   ├── api/            backend FastAPI
 │   └── web/            frontend (placeholder — ADR-011 Proposta)
-├── docs/               PRD, SPECs, ADRs, harness, questões abertas
-├── infra/              PostgreSQL + pgvector, Redis, OTel Collector
+├── compose.yaml        sobe o MVP inteiro: banco, migration e API
+├── docs/               PRD, SPECs, ADRs, harness, runbook, questões abertas
+├── infra/              scripts de inicialização do PostgreSQL
 ├── tests/              unit, integration, e2e, evals
 ├── scripts/            utilitários de desenvolvimento
 ├── .claude/            Agent Harness: rules, agents, skills, hooks, settings
@@ -164,51 +176,78 @@ conhecidos.
 
 ### Pré-requisitos
 
-- [uv](https://docs.astral.sh/uv/) — gerencia Python e dependências
-- Docker com Compose
-- Git
+**Git e Docker.** Nada mais.
 
-`make` é opcional: em Windows use `.\scripts\dev.ps1`.
+A máquina **não** precisa de Python, uv, PostgreSQL, Alembic ou qualquer
+biblioteca da aplicação: tudo roda em container (ADR-016).
 
-### Instalar
+### Subir o MVP
 
-```powershell
+```bash
 git clone <repo> && cd urbanopay
-Copy-Item .env.example .env    # preencha POSTGRES_PASSWORD
-.\scripts\dev.ps1 setup
-.\scripts\dev.ps1 up
-.\scripts\dev.ps1 api
-```
-
-```bash
 cp .env.example .env
-make setup
-make up
-make api
+docker compose up --build
 ```
 
-Verificar:
+Pronto. O `.env.example` é suficiente **sem credencial alguma**: os providers
+de LLM e de pagamento sobem em modo fake e a demo roda inteira.
+
+| Endereço | O que é |
+|---|---|
+| <http://localhost:8000/dev/chat> | Chat de demonstração |
+| <http://localhost:8000/docs> | Documentação interativa da API |
+| <http://localhost:8000/health> | Liveness |
+| <http://localhost:8000/ready> | Readiness: banco e migrations |
+
+O roteiro passo a passo está no
+[**MVP Demo Runbook**](docs/MVP-DEMO-RUNBOOK.md).
+
+### Usar um modelo de linguagem real
+
+Opcional. Troque duas linhas no `.env` e suba de novo:
+
+```env
+LLM_PROVIDER=openai
+OPENAI_API_KEY=<sua-chave>
+OPENAI_MODEL=gpt-5.6-luna
+```
+
+A chave vive **exclusivamente no backend** e entra no container por
+environment em runtime. Ela nunca chega ao browser, à resposta HTTP, ao log, ao
+estado do grafo, ao banco ou à telemetria (ADR-015). A página de chat não tem
+campo de API key — ela conversa apenas com esta API.
+
+Sem a chave e com `LLM_PROVIDER=openai`, a aplicação **falha explicitamente**.
+Não existe fallback silencioso para o fake.
+
+### Desenvolver (opcional)
+
+Para rodar a suíte a partir do host, aí sim são necessários
+[uv](https://docs.astral.sh/uv/) e um PostgreSQL:
 
 ```bash
-curl http://127.0.0.1:8000/api/v1/health
-# {"status":"ok","service":"urbanopay-api","version":"0.1.0"}
+make up          # apenas o PostgreSQL
+make setup
+make verify-all  # formato, lint, tipos, unit, integração, e2e e evals
 ```
 
-Documentação interativa: `http://127.0.0.1:8000/docs` (apenas com
-`APP_ENV=local`).
+Em Windows: `.\scripts\dev.ps1 <alvo>`.
 
 ### Comandos
 
 | Alvo | O que faz |
 |---|---|
-| `setup` | Instala o ambiente a partir do `uv.lock` |
-| `up` / `down` / `logs` / `ps` | Infraestrutura local |
-| `api` | Executa a API com reload |
+| `demo` | Sobe o MVP inteiro em containers: banco, migration e API |
+| `build` / `config` | Constrói a imagem / valida o `compose.yaml` |
+| `up` / `down` / `logs` / `ps` | Infraestrutura local (`up` sobe só o PostgreSQL) |
+| `setup` | Instala o ambiente Python do host a partir do `uv.lock` |
+| `api` | Executa a API no host, com reload |
 | `fmt` / `fmt-check` | Formatação |
 | `lint` / `typecheck` | Lint e tipos |
 | `test-unit` / `test-integration` / `test-e2e` / `evals` | Camadas de teste |
 | `verify` | `fmt-check` + `lint` + `typecheck` + `test-unit` |
-| `migrate` | Indisponível: a persistência decidida em ADR-012 ainda não foi implementada |
+| `verify-all` | `verify` + integração + e2e + evals |
+| `migrate` | Aplica migrations no host (no Compose, é um job dedicado) |
 | `clean` | Remove caches |
 
 O `Makefile` é a definição canônica e é o que a CI executa. `scripts/dev.ps1`
@@ -278,33 +317,26 @@ Nunca se desenvolve diretamente em `main`.
 
 ---
 
-## Pendências que bloqueiam implementação
+## Limitações conhecidas
 
-Detalhadas em [`docs/OPEN-QUESTIONS.md`](docs/OPEN-QUESTIONS.md).
+Detalhadas em [`docs/OPEN-QUESTIONS.md`](docs/OPEN-QUESTIONS.md). Nenhuma delas
+foi preenchida pela implementação — **lacuna documental não vira código
+inventado**.
 
-| ID | Bloqueio |
+| ID | O que falta, e o efeito no produto |
 |---|---|
-| A-05 | Módulo `catalog` sem SPEC — `TICKET_PURCHASE` não é implementável |
-| A-06 | `calculate_usage_cost` exposta em SPEC-004 mas não especificada |
-| A-07 | Interface administrativa de aprovação humana sem especificação |
-| A-08 | Stack do frontend sem ADR aceito |
+| **A-05** | Módulo `catalog` sem SPEC. `search_products`, `get_product` e `get_ticket` resolvem para `TOOL_UNAVAILABLE`, e **compra de bilhete não é jornada**. Nenhum produto, preço ou validade é simulado |
+| **A-06** | `calculate_usage_cost` sem contrato. **O agente não recomenda valor de recarga**: o cliente informa, e o domínio valida |
+| **A-07** | Sem superfície administrativa de aprovação. Acima de R$ 200,00 a jornada **para** em `REQUIRES_APPROVAL` — e parar é o comportamento correto |
+| **A-08** | Stack de frontend sem ADR aceito. A página de chat é ferramenta de **desenvolvimento**, servida pela API sob `APP_ENV=local`, e não antecipa o ADR-011 |
+| **A-18** | "Pago e não entregável" termina em `RECONCILIATION_REQUIRED`, sem estorno e sem nova cobrança. A resolução administrativa não existe |
+| **A-14 / A-15** | Divergências **documentais** da SPEC-003, sem efeito em comportamento |
+| **H-05** (parcial) | SDK do Mercado Pago não validado: o adaptador não existe por falta de credencial de teste. `FakePaymentProvider` é o sandbox do MVP |
 
-Nenhuma dessas lacunas deve ser preenchida pela implementação.
-
-**H-11 foi resolvida** em 2026-09-08 pelo
-[ADR-014](docs/adr/ADR-014-agent-state-persistence.md): a persistência do
-estado conversacional pertence à aplicação e é versionada por Alembic; nenhum
-checkpointer durável nativo do LangGraph é adotado no MVP.
-
-Com isso a Etapa 2 da SPEC-004 fica **arquiteturalmente desbloqueada**, e ainda
-não implementada. A introdução do LangGraph continua dependendo da validação de
-compatibilidade com Python 3.13 registrada em **H-05**, que permanece aberta e
-deve ser verificada antes de instalar a dependência.
-
-Há ainda duas divergências **documentais** abertas pela implementação da
-SPEC-003, que não bloqueiam comportamento: **A-14** (três erros necessários
-ausentes de SPEC-003 §16) e **A-15** (o mecanismo de idempotência do webhook é
-a unicidade do evento, não um `IdempotencyRecord`).
+**Resolvidas nesta entrega:** H-11 (pelo [ADR-014](docs/adr/ADR-014-agent-state-persistence.md)),
+H-05 na parte `langgraph`, H-07 (tolerância a coleta vazia removida de todas as
+camadas), H-12 (canal do OTP de demonstração) e a implementação de A-19
+(coordenador pós-pagamento).
 
 ---
 
