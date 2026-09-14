@@ -16,6 +16,7 @@ externo responderia. Quem decide efeito é o `PaymentService`.
 from __future__ import annotations
 
 import itertools
+import uuid
 from typing import TYPE_CHECKING
 
 from urbanopay.modules.payments.domain.entities import ProviderCharge
@@ -55,6 +56,16 @@ class FakePaymentProvider:
         self._create_status = create_status
         self._charges: dict[str, PaymentStatus] = {}
         self._keys_to_ids: dict[str, str] = {}
+        # Prefixo único por instância, somado ao contador. Um provider real
+        # nunca reemite um identificador de cobrança, e o dublê precisa ter a
+        # mesma propriedade: o banco tem unicidade em
+        # `(provider, provider_payment_id)`, e sem o prefixo duas instâncias —
+        # duas execuções de teste, dois processos — reiniciariam em
+        # `fake-charge-1` e colidiriam com cobranças já comitadas.
+        #
+        # O determinismo que os testes usam é **dentro** da instância: a mesma
+        # idempotency key continua devolvendo a mesma cobrança.
+        self._prefix = uuid.uuid4().hex[:8]
         self._sequence: Iterator[int] = itertools.count(1)
         self._fail_once: Exception | None = None
         self._register_before_failing = False
@@ -145,7 +156,7 @@ class FakePaymentProvider:
         existing_id = self._keys_to_ids.get(idempotency_key)
         if existing_id is not None:
             return existing_id
-        provider_payment_id = f"fake-charge-{next(self._sequence)}"
+        provider_payment_id = f"fake-charge-{self._prefix}-{next(self._sequence)}"
         self._keys_to_ids[idempotency_key] = provider_payment_id
         self._charges[provider_payment_id] = self._create_status
         return provider_payment_id

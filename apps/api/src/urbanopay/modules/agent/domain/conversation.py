@@ -83,10 +83,15 @@ class PendingConfirmation:
     finalidade: compor a frase já apresentada ("você confirma R$ 100,00?").
     Nenhuma decisão o consulta — o valor que vale é `order.total`, relido do
     PostgreSQL a cada operação crítica (§3.1).
+
+    Por isso ele é **valor de turno** e **não é persistido** (ADR-014): uma
+    cópia durável de `order.total` fora do domínio financeiro seria um segundo
+    valor monetário, mais velho que o primeiro e sem constraint que o confira.
+    Ao retomar a conversa, ele vem `None` e é recomposto relendo o Order.
     """
 
     order_id: uuid.UUID
-    display_total: str
+    display_total: str | None
     presented_at: datetime
 
     def binds(self, order_id: uuid.UUID) -> bool:
@@ -148,6 +153,68 @@ class ConversationState:
 
     def with_payment(self, payment_id: uuid.UUID) -> ConversationState:
         return replace(self, current_payment_id=payment_id)
+
+    def without_journey_references(self) -> ConversationState:
+        """Descarta Quote, Order, Payment e confirmação de uma jornada encerrada.
+
+        Chamado quando o backend mostra o Order em estado terminal sem efeito
+        (`CANCELLED`, `EXPIRED`). Sem isso, a próxima intenção do cliente
+        herdaria referências mortas e a conversa passaria a tentar pagar um
+        pedido que não existe mais.
+
+        `selected_card_id` **sobrevive** de propósito: o cartão do cliente não
+        deixou de ser dele porque um pedido expirou, e reperguntar seria
+        repetir uma pergunta já respondida (§6).
+        """
+        return replace(
+            self,
+            current_quote_id=None,
+            current_order_id=None,
+            current_payment_id=None,
+            pending_confirmation=None,
+        )
+
+    def with_session(self, session_id: uuid.UUID) -> ConversationState:
+        """Revincula a conversa a outra sessão, limpando a confirmação pendente.
+
+        A limpeza não é zelo excessivo: uma confirmação apresentada a uma
+        sessão não pode ser consumida por outra sem ser reapresentada, porque
+        a pessoa do outro lado pode ter mudado. As demais referências
+        sobrevivem sem risco — são identificadores opacos, e toda leitura
+        revalida titularidade contra o cliente da **nova** sessão.
+        """
+        if session_id == self.session_id:
+            return self
+        return replace(self, session_id=session_id, pending_confirmation=None)
+
+
+@dataclass(frozen=True, slots=True)
+class StoredConversation:
+    """Conversa como ela vive no banco (ADR-014).
+
+    Separada de `ConversationState` de propósito: `version` e os instantes são
+    **metadados de persistência**, não contexto de orquestração. Um node do
+    grafo não tem o que fazer com eles, e misturá-los convidaria alguém a
+    tomar decisão de negócio olhando para `updated_at`.
+
+    `version` serve à concorrência otimista, e não é histórico: existe uma
+    única linha por conversa, sobrescrita a cada turno.
+    """
+
+    state: ConversationState
+    version: int
+    created_at: datetime
+    updated_at: datetime
+    expires_at: datetime
+
+    def is_expired(self, now: datetime) -> bool:
+        """Expiração avaliada **na leitura**, como em `Session.is_expired`.
+
+        É o que faz a correção não depender de nenhuma rotina de purga rodar:
+        conversa expirada é tratada como ausente mesmo que a linha continue no
+        banco.
+        """
+        return now >= self.expires_at
 
 
 def new_conversation(session_id: uuid.UUID) -> ConversationState:

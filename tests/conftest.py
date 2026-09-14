@@ -55,8 +55,25 @@ def settings() -> Settings:
 
 
 @pytest.fixture
-def client() -> Iterator[TestClient]:
-    """Cliente HTTP de teste sobre a aplicação FastAPI."""
+def client(monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClient]:
+    """Cliente HTTP de teste sobre a aplicação FastAPI.
+
+    A configuração é **injetada, não herdada do ambiente**: um teste de unidade
+    não pode depender de existir um `.env` na máquina, nem passar por acidente
+    porque o desenvolvedor tem um. Todos os valores são fictícios.
+
+    Isto **não** torna o teste de integração: montar a aplicação cria o engine,
+    mas não abre conexão — e as sondas de liveness não tocam o banco, que é
+    exatamente a propriedade que elas existem para ter (ADR-016).
+    """
+    monkeypatch.setenv("APP_ENV", "local")
+    monkeypatch.setenv("POSTGRES_PASSWORD", "unit_test_fictitious_password")
+    monkeypatch.setenv("IDENTITY_HASH_SECRET", "unit_test_fictitious_secret")
+    monkeypatch.setenv("LLM_PROVIDER", "fake")
+    monkeypatch.setenv("PAYMENT_PROVIDER", "fake")
     get_settings.cache_clear()
+
     with TestClient(create_app()) as test_client:
         yield test_client
+
+    get_settings.cache_clear()

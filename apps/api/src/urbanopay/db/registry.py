@@ -38,6 +38,7 @@ from sqlalchemy import MetaData
 # nenhum módulo de domínio, por isso vem de `db` e não de `modules`.
 from urbanopay.db import idempotency as _idempotency_models  # noqa: F401
 from urbanopay.db.base import Base
+from urbanopay.modules.agent.infrastructure import models as _agent_models  # noqa: F401
 from urbanopay.modules.approvals.infrastructure import models as _approvals_models  # noqa: F401
 from urbanopay.modules.cards.infrastructure import models as _cards_models  # noqa: F401
 from urbanopay.modules.fare.infrastructure import models as _fare_models  # noqa: F401

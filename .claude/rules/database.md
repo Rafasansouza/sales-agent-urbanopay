@@ -145,6 +145,16 @@ checkpointer durável nativo do LangGraph é adotado no MVP.
 Regra permanente daí decorrente: **nenhum schema é criado por runtime ou por
 framework** — nem `setup()`, nem `create_all`, sob nome algum.
 
-A tabela ainda **não existe**: ADR-014 fixa direção, e a implementação pertence
-à Etapa 2 da SPEC-004. Quando a migration for criada, ela verifica o head real
-da cadeia antes de definir `down_revision`.
+**Implementada em 2026-09-13** pela revision `agc0001`, que criou
+`agent_conversations` e `agent_turn_requests`. A cadeia passou a ser
+`fare0001 → fare0002 → idc0001 → ord0001 → pay0001 → ful0001 → agc0001`, e o
+head real foi verificado antes de definir `down_revision`.
+
+`agent_conversations` não tem coluna monetária nem JSONB, por desenho: a
+ausência é o controle que impede valor de apresentação e PII virarem estado
+durável. Um teste de arquitetura afirma o conjunto **exato** de colunas.
+
+O schema da aplicação passou a ser aplicado por um **job de migration do
+Compose** (ADR-016), que roda `alembic upgrade head` e serve de portão de
+startup — se ele falha, a API não sobe. Continua valendo: nenhum schema é
+criado por runtime ou por framework.

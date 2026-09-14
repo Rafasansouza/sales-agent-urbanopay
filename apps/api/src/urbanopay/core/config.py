@@ -29,13 +29,14 @@ class AppEnv(StrEnum):
 
 
 class LLMProviderName(StrEnum):
-    """Providers de LLM previstos em ADR-010.
+    """Providers de LLM previstos em ADR-010 e ADR-015.
 
-    `FAKE` é o padrão para que o ambiente suba sem credencial alguma.
+    `FAKE` é o padrão para que o ambiente suba sem credencial alguma — é o que
+    permite `docker compose up` funcionar num clone recém-feito.
     """
 
     FAKE = "fake"
-    ANTHROPIC = "anthropic"
+    OPENAI = "openai"
 
 
 class PaymentProviderName(StrEnum):
@@ -98,11 +99,27 @@ class Settings(BaseSettings):
     quote_ttl_minutes: int = 10
     order_draft_ttl_minutes: int = 10
 
-    # --- LLM (ADR-010) ---
+    # --- Agente conversacional (SPEC-004, ADR-014) ---
+    # TTL da conversa, deslizante e avaliado na leitura. Nenhum documento de
+    # produto fixa este número: é parâmetro de retenção, não regra de negócio.
+    # 24h cobre o cliente que paga o Pix e volta depois, sem reter contexto
+    # indefinidamente (ADR-014, D-3).
+    conversation_ttl_minutes: int = 1440
+    # Tetos de SPEC-004 §14 que possuem consumidor nesta etapa.
+    max_tool_calls_per_turn: int = 5
+    max_llm_calls_per_turn: int = 4
+
+    # --- LLM (ADR-010, ADR-015) ---
     # O acesso em runtime sempre passa por uma abstração de provider. Nenhum
     # node instancia SDK diretamente.
     llm_provider: LLMProviderName = LLMProviderName.FAKE
-    llm_model: str = "claude-sonnet-5"
+    # ⚠️ Credencial: vive exclusivamente no backend. `SecretStr` impede que ela
+    # apareça em repr, log ou trace. Nunca é enviada a HTML, JavaScript,
+    # browser, resposta HTTP, estado do grafo, ConversationState, PostgreSQL,
+    # telemetria ou ToolResult (ADR-015).
+    openai_api_key: SecretStr = SecretStr("")
+    # O modelo nunca é hardcoded no código (ADR-015).
+    openai_model: str = "gpt-5.6-luna"
 
     # --- Pagamentos (ADR-007) ---
     # Somente ambiente de teste é suportado no MVP.
@@ -118,6 +135,20 @@ class Settings(BaseSettings):
     @property
     def is_local(self) -> bool:
         return self.app_env is AppEnv.LOCAL
+
+    def require_llm_credentials(self) -> None:
+        """Valida a credencial do provider selecionado (ADR-015).
+
+        Falha **explícita** e sem fallback silencioso para o Fake: um fallback
+        faria uma demonstração parecer real enquanto responde por regra fixa, e
+        tornaria indistinguível "configurei errado" de "está funcionando".
+
+        A mensagem nunca imprime parte alguma da chave.
+        """
+        if self.llm_provider is not LLMProviderName.OPENAI:
+            return
+        if not self.openai_api_key.get_secret_value().strip():
+            raise ValueError("OPENAI_API_KEY is required when LLM_PROVIDER=openai")
 
 
 @lru_cache(maxsize=1)
