@@ -1,11 +1,11 @@
-# apps/web — Frontend
+# apps/frontend — Frontend
 
 **Documentos:** ADR-001, ADR-011 (**Proposta**)
 **Estado:** placeholder — aguardando decisão de stack
 
 ## Por que este diretório está vazio
 
-ADR-001 estabelece `apps/web` como parte da estrutura do monorepo, mas
+ADR-001 estabelece `apps/frontend` como parte da estrutura do monorepo, mas
 **nenhum documento aceito define a stack do frontend**.
 
 CLAUDE.md determina que dependências majoritárias exijam ADR antes da

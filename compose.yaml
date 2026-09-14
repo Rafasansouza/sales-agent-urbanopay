@@ -89,7 +89,7 @@ services:
   api:
     build:
       context: .
-      dockerfile: apps/api/Dockerfile
+      dockerfile: apps/backend/Dockerfile
     image: urbanopay-api:local
     restart: unless-stopped
     # `env_file` é o único caminho pelo qual a credencial entra: em runtime,

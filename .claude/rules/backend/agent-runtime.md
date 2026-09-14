@@ -1,8 +1,8 @@
 ---
 description: Regras do Sales Agent, LangGraph, tools e providers de LLM (SPEC-004).
 paths:
-  - "apps/api/src/urbanopay/modules/agent/**"
-  - "apps/api/src/urbanopay/providers/llm/**"
+  - "apps/backend/src/urbanopay/modules/agent/**"
+  - "apps/backend/src/urbanopay/providers/llm/**"
   - "tests/**/agent/**"
   - "tests/evals/**"
 ---

@@ -1,12 +1,12 @@
 ---
 description: Regras de Quote, Order, aprovação e Payment (SPEC-003). Idempotência financeira.
 paths:
-  - "apps/api/src/urbanopay/modules/orders/**"
-  - "apps/api/src/urbanopay/modules/payments/**"
-  - "apps/api/src/urbanopay/modules/approvals/**"
-  - "apps/api/src/urbanopay/providers/payments/**"
-  - "apps/api/src/urbanopay/core/idempotency.py"
-  - "apps/api/src/urbanopay/db/idempotency.py"
+  - "apps/backend/src/urbanopay/modules/orders/**"
+  - "apps/backend/src/urbanopay/modules/payments/**"
+  - "apps/backend/src/urbanopay/modules/approvals/**"
+  - "apps/backend/src/urbanopay/providers/payments/**"
+  - "apps/backend/src/urbanopay/core/idempotency.py"
+  - "apps/backend/src/urbanopay/db/idempotency.py"
   - "tests/**/orders/**"
   - "tests/**/payments/**"
   - "tests/**/approvals/**"

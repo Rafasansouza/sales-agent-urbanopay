@@ -36,7 +36,7 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-SRC_ROOT = REPO_ROOT / "apps" / "api" / "src" / "urbanopay"
+SRC_ROOT = REPO_ROOT / "apps" / "backend" / "src" / "urbanopay"
 MODULES_ROOT = SRC_ROOT / "modules"
 
 FORBIDDEN_IN_DOMAIN = frozenset({"sqlalchemy", "psycopg", "alembic"})
@@ -406,7 +406,7 @@ def test_checkpointer_nativo_nao_foi_adotado() -> None:
     # comentário que documenta a proibição não é violação dela — mesma
     # disciplina de `strip_prose`.
     manifest = tomllib.loads(
-        (REPO_ROOT / "apps" / "api" / "pyproject.toml").read_text(encoding="utf-8")
+        (REPO_ROOT / "apps" / "backend" / "pyproject.toml").read_text(encoding="utf-8")
     )
     declaradas = [
         requisito

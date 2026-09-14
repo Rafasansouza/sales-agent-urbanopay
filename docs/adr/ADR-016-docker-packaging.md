@@ -28,7 +28,7 @@ separado" é fronteira que exige ADR — e um job de migration é exatamente iss
 
 ### 1. Imagem da API
 
-`apps/api/Dockerfile`, multi-stage sobre `python:3.13-slim` (ADR-013):
+`apps/backend/Dockerfile`, multi-stage sobre `python:3.13-slim` (ADR-013):
 
 - dependências instaladas de forma reproduzível com `uv sync --frozen`, a partir do
   `uv.lock` versionado — a mesma garantia que a CI usa;

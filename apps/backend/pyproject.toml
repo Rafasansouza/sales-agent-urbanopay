@@ -1,5 +1,5 @@
 # =============================================================================
-# apps/api — backend FastAPI da UrbanoPay Mobilidade
+# apps/backend — backend FastAPI da UrbanoPay Mobilidade
 # =============================================================================
 # Membro do workspace uv declarado na raiz. A configuração de Ruff, mypy e
 # pytest é compartilhada e vive no `pyproject.toml` da raiz (ADR-013).

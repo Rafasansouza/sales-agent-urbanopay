@@ -1,4 +1,4 @@
-# apps/api — Backend FastAPI
+# apps/backend — Backend FastAPI
 
 Backend do assistente inteligente de vendas da UrbanoPay Mobilidade.
 

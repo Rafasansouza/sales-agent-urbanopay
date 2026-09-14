@@ -17,7 +17,7 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-SRC_ROOT = REPO_ROOT / "apps" / "api" / "src" / "urbanopay"
+SRC_ROOT = REPO_ROOT / "apps" / "backend" / "src" / "urbanopay"
 
 # Todo caminho por onde um valor monetário de SPEC-003 transita.
 MONEY_PATHS = (

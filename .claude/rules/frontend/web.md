@@ -1,7 +1,7 @@
 ---
 description: Regras do frontend web. A stack está pendente de ADR-011.
 paths:
-  - "apps/web/**"
+  - "apps/frontend/**"
 ---
 
 # Regra — Frontend Web
@@ -17,7 +17,7 @@ Enquanto esse ADR não for aceito:
 
 - não instale nenhuma dependência JavaScript ou TypeScript;
 - não crie scaffold, `package.json`, build ou configuração de framework;
-- `apps/web/` contém apenas documentação.
+- `apps/frontend/` contém apenas documentação.
 
 Se receber uma tarefa que exija implementar frontend, **reporte a pendência**
 (A-08 em `docs/OPEN-QUESTIONS.md`) em vez de escolher a stack.

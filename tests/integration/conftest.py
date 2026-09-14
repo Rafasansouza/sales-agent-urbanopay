@@ -47,7 +47,7 @@ def alembic_config() -> AlembicConfig:
     cfg = AlembicConfig(str(REPO_ROOT / "alembic.ini"))
     cfg.set_main_option(
         "script_location",
-        str(REPO_ROOT / "apps" / "api" / "src" / "urbanopay" / "db" / "migrations"),
+        str(REPO_ROOT / "apps" / "backend" / "src" / "urbanopay" / "db" / "migrations"),
     )
     return cfg
 

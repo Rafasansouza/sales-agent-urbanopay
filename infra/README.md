@@ -51,7 +51,7 @@ e cria somente extensões:
 
 Nenhuma tabela e nenhum seed. O esquema pertence a migrations versionadas com
 Alembic (ADR-012). O ambiente do Alembic está implementado em
-`apps/api/src/urbanopay/db/migrations/`; a primeira revision nasce com a
+`apps/backend/src/urbanopay/db/migrations/`; a primeira revision nasce com a
 primeira SPEC.
 
 Nota: o PostgreSQL da **CI** não executa este script de init — a migration da

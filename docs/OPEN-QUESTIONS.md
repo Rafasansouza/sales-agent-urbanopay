@@ -206,7 +206,7 @@ rejeitar. O PRD §19 mantém "detalhes finais da interface administrativa de
 aprovação" como pendência.
 
 Não existe SPEC, endpoint definido, nem aplicação administrativa na estrutura
-de ADR-001 (`apps/api` e `apps/web` apenas).
+de ADR-001 (`apps/backend` e `apps/frontend` apenas).
 
 **O que precisa ser decidido:** quem aprova, por qual superfície (endpoint
 autenticado, tela administrativa, aplicação separada), com qual modelo de
@@ -223,15 +223,15 @@ direta ao serviço (o que os testes fazem).
 
 ## 🟠 A-08 — Stack do frontend sem ADR
 
-**Bloqueia:** qualquer implementação em `apps/web`
+**Bloqueia:** qualquer implementação em `apps/frontend`
 **Fontes:** ADR-001, AGENT-HARNESS §3
 
-ADR-001 exige `apps/web` e o harness prevê `.claude/rules/frontend/web.md`, mas
+ADR-001 exige `apps/frontend` e o harness prevê `.claude/rules/frontend/web.md`, mas
 nenhum documento aceito define a stack. O `.gitignore` cita `.next/` e
 `node_modules/`, o que sugere Next.js — indício, não decisão.
 
 **Encaminhamento:** `ADR-011` foi criado com status **Proposta**. Enquanto não
-for aceito, `apps/web/` contém apenas documentação.
+for aceito, `apps/frontend/` contém apenas documentação.
 
 ---
 
@@ -566,7 +566,7 @@ Reproduzidas aqui apenas para consolidar a visão. A fonte permanece o PRD.
 | Item | Bloqueia |
 |---|---|
 | Nome comercial final do agente | Documentação de produto, README, prompts |
-| Identidade visual | `apps/web` |
+| Identidade visual | `apps/frontend` |
 | Regras detalhadas do Passe Diário | SPEC-006 (ver A-05) |
 | Regras detalhadas do Pacote 10 Viagens | SPEC-006 (ver A-05) |
 | Validade exata do QR/bilhete | SPEC-005, SPEC-006 |

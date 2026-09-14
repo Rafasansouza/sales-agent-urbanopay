@@ -7,7 +7,7 @@
 # workspace, (b) centralizar a configuração de qualidade que cobre backend,
 # testes e hooks do harness, e (c) manter um único `uv.lock` determinístico.
 #
-# O pacote real do backend é `apps/api/pyproject.toml`.
+# O pacote real do backend é `apps/backend/pyproject.toml`.
 # =============================================================================
 
 [project]
@@ -22,7 +22,7 @@ dependencies = ["urbanopay"]
 package = false
 
 [tool.uv.workspace]
-members = ["apps/api"]
+members = ["apps/backend"]
 
 [tool.uv.sources]
 urbanopay = { workspace = true }
@@ -47,7 +47,7 @@ dev = [
 [tool.ruff]
 line-length = 100
 target-version = "py313"
-src = ["apps/api/src", "tests"]
+src = ["apps/backend/src", "tests"]
 extend-exclude = [".venv", "infra"]
 
 [tool.ruff.lint]
@@ -92,7 +92,7 @@ docstring-code-format = true
 # -----------------------------------------------------------------------------
 [tool.mypy]
 python_version = "3.13"
-files = ["apps/api/src", "tests"]
+files = ["apps/backend/src", "tests"]
 warn_unused_configs = true
 warn_redundant_casts = true
 warn_unused_ignores = true

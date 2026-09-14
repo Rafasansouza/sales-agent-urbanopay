@@ -1001,7 +1001,7 @@ wheels = [
 [[package]]
 name = "urbanopay"
 version = "0.1.0"
-source = { editable = "apps/api" }
+source = { editable = "apps/backend" }
 dependencies = [
     { name = "alembic" },
     { name = "fastapi" },
@@ -1046,7 +1046,7 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "urbanopay", editable = "apps/api" }]
+requires-dist = [{ name = "urbanopay", editable = "apps/backend" }]
 
 [package.metadata.requires-dev]
 dev = [

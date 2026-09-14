@@ -166,7 +166,7 @@ Fronteiras declaradas em ADR-001: `agent`, `catalog`, `fare`, `identity`,
 `cards`, `orders`, `payments`, `approvals`, `fulfillment`, `tickets`,
 `postsale`, `observability`.
 
-Cada módulo em `apps/api/src/urbanopay/modules/` possui um `README.md` com a
+Cada módulo em `apps/backend/src/urbanopay/modules/` possui um `README.md` com a
 SPEC aplicável, as tools permitidas, as tools proibidas e os bloqueios
 conhecidos.
 

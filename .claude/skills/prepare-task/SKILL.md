@@ -40,7 +40,7 @@ Se houver alterações não relacionadas pendentes, reporte antes de prosseguir.
 | Agente, grafo, tools, prompt | `agent` | SPEC-004 | 002, 003, 005, 010 |
 | Recarga, ledger, ticket, comprovante | `fulfillment`, `tickets`, `postsale` | SPEC-005 | 005, 007 |
 | Produto, catálogo | `catalog` | **nenhuma** | 004 |
-| Frontend | `apps/web` | **nenhuma** | 001, 011 (Proposta) |
+| Frontend | `apps/frontend` | **nenhuma** | 001, 011 (Proposta) |
 
 ### 4. Carregar apenas o necessário
 

@@ -30,15 +30,15 @@ WORKDIR /app
 # Primeiro só os manifestos: esta camada é reaproveitada enquanto as
 # dependências não mudarem.
 COPY pyproject.toml uv.lock ./
-# O README acompanha o manifesto: `apps/api/pyproject.toml` o declara em
+# O README acompanha o manifesto: `apps/backend/pyproject.toml` o declara em
 # `readme`, e o hatchling falha o build sem ele.
-COPY apps/api/pyproject.toml apps/api/README.md apps/api/
+COPY apps/backend/pyproject.toml apps/backend/README.md apps/backend/
 
 # `--no-install-project` instala apenas as dependências; o pacote da aplicação
 # entra no passo seguinte, junto com o código.
 RUN uv sync --frozen --no-dev --no-install-project
 
-COPY apps/api/src apps/api/src
+COPY apps/backend/src apps/backend/src
 COPY alembic.ini ./
 
 RUN uv sync --frozen --no-dev

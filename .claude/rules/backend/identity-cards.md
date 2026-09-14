@@ -1,8 +1,8 @@
 ---
 description: Regras de identidade, autenticação simulada, sessões e cartões (SPEC-002).
 paths:
-  - "apps/api/src/urbanopay/modules/identity/**"
-  - "apps/api/src/urbanopay/modules/cards/**"
+  - "apps/backend/src/urbanopay/modules/identity/**"
+  - "apps/backend/src/urbanopay/modules/cards/**"
   - "tests/**/identity/**"
   - "tests/**/cards/**"
   - "tests/**/*card*"
