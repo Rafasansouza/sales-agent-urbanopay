@@ -86,12 +86,13 @@ silenciosamente.
 | [008](docs/adr/ADR-008-observability.md) | OpenTelemetry e Langfuse | Aceito |
 | [009](docs/adr/ADR-009-redis.md) | Redis restrito a estado efêmero | Aceito |
 | [010](docs/adr/ADR-010-llm-strategy.md) | Estratégia de LLM e abstração de provider | Aceito |
-| [011](docs/adr/ADR-011-web-frontend-stack.md) | Stack do frontend web | **Proposta** |
+| [011](docs/adr/ADR-011-web-frontend-stack.md) | Stack do frontend web: Next.js App Router | Aceito |
 | [012](docs/adr/ADR-012-persistence-orm-migrations.md) | Persistência, ORM e migrations | Aceito |
 | [013](docs/adr/ADR-013-python-toolchain.md) | Toolchain Python | Aceito |
 | [014](docs/adr/ADR-014-agent-state-persistence.md) | Persistência do estado conversacional do agente | Aceito |
 | [015](docs/adr/ADR-015-openai-llm-provider.md) | Provider de LLM do MVP: OpenAI | Aceito |
 | [016](docs/adr/ADR-016-docker-packaging.md) | Empacotamento e execução local em Docker | Aceito |
+| [017](docs/adr/ADR-017-package-split.md) | Separação de `apps/` em pacotes por responsabilidade | Aceito |
 
 ---
 
@@ -141,7 +142,7 @@ Prompt é orientação, nunca segurança.
 | Observabilidade | OpenTelemetry + Langfuse | ADR-008 |
 | LLM | OpenAI atrás do port `LLMProvider`; `FakeLLMProvider` em CI | ADR-010, ADR-015 |
 | Ferramentas | uv, Ruff, mypy, pytest | ADR-013 |
-| Frontend | **não decidido**; a demo é uma página dev-only servida pela API | ADR-011 (Proposta), ADR-016 |
+| Frontend | Next.js App Router + TypeScript | ADR-011 |
 | Empacotamento | Docker Compose: PostgreSQL, job de migration e API | ADR-016 |
 
 ### Estrutura do repositório
@@ -166,7 +167,7 @@ Fronteiras declaradas em ADR-001: `agent`, `catalog`, `fare`, `identity`,
 `cards`, `orders`, `payments`, `approvals`, `fulfillment`, `tickets`,
 `postsale`, `observability`.
 
-Cada módulo em `apps/api/src/urbanopay/modules/` possui um `README.md` com a
+Cada módulo em `apps/backend/src/urbanopay/modules/` possui um `README.md` com a
 SPEC aplicável, as tools permitidas, as tools proibidas e os bloqueios
 conhecidos.
 
@@ -194,7 +195,7 @@ de LLM e de pagamento sobem em modo fake e a demo roda inteira.
 
 | Endereço | O que é |
 |---|---|
-| <http://localhost:8000/dev/chat> | Chat de demonstração |
+| <http://localhost:3000> | **Interface da UrbanoPay** |
 | <http://localhost:8000/docs> | Documentação interativa da API |
 | <http://localhost:8000/health> | Liveness |
 | <http://localhost:8000/ready> | Readiness: banco e migrations |
@@ -328,12 +329,12 @@ inventado**.
 | **A-05** | Módulo `catalog` sem SPEC. `search_products`, `get_product` e `get_ticket` resolvem para `TOOL_UNAVAILABLE`, e **compra de bilhete não é jornada**. Nenhum produto, preço ou validade é simulado |
 | **A-06** | `calculate_usage_cost` sem contrato. **O agente não recomenda valor de recarga**: o cliente informa, e o domínio valida |
 | **A-07** | Sem superfície administrativa de aprovação. Acima de R$ 200,00 a jornada **para** em `REQUIRES_APPROVAL` — e parar é o comportamento correto |
-| **A-08** | Stack de frontend sem ADR aceito. A página de chat é ferramenta de **desenvolvimento**, servida pela API sob `APP_ENV=local`, e não antecipa o ADR-011 |
 | **A-18** | "Pago e não entregável" termina em `RECONCILIATION_REQUIRED`, sem estorno e sem nova cobrança. A resolução administrativa não existe |
 | **A-14 / A-15** | Divergências **documentais** da SPEC-003, sem efeito em comportamento |
 | **H-05** (parcial) | SDK do Mercado Pago não validado: o adaptador não existe por falta de credencial de teste. `FakePaymentProvider` é o sandbox do MVP |
 
-**Resolvidas nesta entrega:** H-11 (pelo [ADR-014](docs/adr/ADR-014-agent-state-persistence.md)),
+**Resolvidas nesta entrega:** A-08 (pelo [ADR-011](docs/adr/ADR-011-web-frontend-stack.md)),
+H-11 (pelo [ADR-014](docs/adr/ADR-014-agent-state-persistence.md)),
 H-05 na parte `langgraph`, H-07 (tolerância a coleta vazia removida de todas as
 camadas), H-12 (canal do OTP de demonstração) e a implementação de A-19
 (coordenador pós-pagamento).

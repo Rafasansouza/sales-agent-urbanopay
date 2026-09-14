@@ -18,33 +18,33 @@ from decimal import Decimal
 import pytest
 
 from tests.unit.agent.world import ABOVE_APPROVAL_THRESHOLD, RECHARGE_AMOUNT, AgentWorld
-from urbanopay.core.idempotency import IdempotencyConflictError
-from urbanopay.modules.agent.application.error_mapping import map_domain_error
-from urbanopay.modules.agent.application.executor import ToolExecutor
-from urbanopay.modules.agent.domain.catalog import ToolCaller
-from urbanopay.modules.agent.domain.conversation import (
+from urbanopay_agent.application.error_mapping import map_domain_error
+from urbanopay_agent.application.executor import ToolExecutor
+from urbanopay_agent.domain.catalog import ToolCaller
+from urbanopay_agent.domain.conversation import (
     SENSITIVE_INPUT_PHASES,
     ConversationPhase,
     ConversationState,
     PendingConfirmation,
     new_conversation,
 )
-from urbanopay.modules.agent.domain.results import GuardCode, NextAction
-from urbanopay.modules.cards.domain.errors import CardNotAccessibleError, CardNotActiveError
-from urbanopay.modules.fare.domain.errors import EmptyTripError, UnsupportedTripCompositionError
-from urbanopay.modules.fulfillment.domain.errors import (
+from urbanopay_agent.domain.results import GuardCode, NextAction
+from urbanopay_database.idempotency import IdempotencyConflictError
+from urbanopay_domains.cards.domain.errors import CardNotAccessibleError, CardNotActiveError
+from urbanopay_domains.fare.domain.errors import EmptyTripError, UnsupportedTripCompositionError
+from urbanopay_domains.fulfillment.domain.errors import (
     EffectConflictError,
     OrderNotPaidError,
     ReceiptNotAvailableError,
     ReconciliationRequiredError,
 )
-from urbanopay.modules.identity.domain.errors import NotAuthenticatedError, SessionExpiredError
-from urbanopay.modules.orders.domain.errors import (
+from urbanopay_domains.identity.domain.errors import NotAuthenticatedError, SessionExpiredError
+from urbanopay_domains.orders.domain.errors import (
     InvalidRechargeAmountError,
     OrderExpiredError,
     UnsupportedOperationTypeError,
 )
-from urbanopay.modules.payments.domain.errors import (
+from urbanopay_domains.payments.domain.errors import (
     PaymentAlreadyApprovedError,
     PaymentProviderTimeoutError,
     PaymentStatusUnknownError,
@@ -229,7 +229,7 @@ async def test_cartao_nao_ativo_nao_e_selecionado() -> None:
     """Consultar um cartão bloqueado não o torna o cartão da jornada."""
     from tests.unit.cards.fakes import make_card
     from tests.unit.identity.fakes import make_customer
-    from urbanopay.modules.cards.domain.enums import CardStatus
+    from urbanopay_domains.cards.domain.enums import CardStatus
 
     customer = make_customer()
     bloqueado = make_card(customer_id=customer.id, status=CardStatus.BLOCKED)
@@ -334,7 +334,7 @@ async def test_excecao_desconhecida_vira_internal_error_sanitizado() -> None:
 
     from dataclasses import replace
 
-    from urbanopay.modules.cards.application.services import CardService
+    from urbanopay_domains.cards.application.services import CardService
 
     world = AgentWorld()
     services = replace(world.services, cards=CardService(ExplodingCards()))  # type: ignore[arg-type]

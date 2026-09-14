@@ -11,8 +11,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from tests.integration.identity_cards.conftest import FIXED_NOW, IdentityCardsTestData
-from urbanopay.modules.cards.infrastructure.models import CardModel
-from urbanopay.modules.identity.infrastructure.models import (
+from urbanopay_domains.cards.infrastructure.models import CardModel
+from urbanopay_domains.identity.infrastructure.models import (
     AuthChallengeModel,
     CustomerModel,
     SessionModel,

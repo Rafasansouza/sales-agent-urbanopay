@@ -12,12 +12,12 @@ from datetime import timedelta
 import pytest
 
 from tests.unit.orders_payments.builders import FIXED_NOW, make_payment
-from urbanopay.modules.payments.domain.entities import (
+from urbanopay_domains.payments.domain.entities import (
     ACTIVE_PAYMENT_STATUSES,
     TERMINAL_PAYMENT_STATUSES,
 )
-from urbanopay.modules.payments.domain.enums import PaymentStatus
-from urbanopay.modules.payments.domain.state_machine import (
+from urbanopay_domains.payments.domain.enums import PaymentStatus
+from urbanopay_domains.payments.domain.state_machine import (
     ApplicationOutcome,
     apply_provider_status,
 )

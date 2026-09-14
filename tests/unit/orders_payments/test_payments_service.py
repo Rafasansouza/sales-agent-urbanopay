@@ -15,29 +15,29 @@ from decimal import Decimal
 import pytest
 
 from tests.unit.orders_payments.builders import FIXED_NOW, TTL, make_quote
-from urbanopay.core.idempotency import IdempotencyStatus
-from urbanopay.modules.orders.application.services import OrderService
-from urbanopay.modules.orders.domain.enums import OrderStatus
-from urbanopay.modules.orders.domain.errors import (
+from urbanopay.providers.payments.fake import FakePaymentProvider
+from urbanopay_database.idempotency import IdempotencyStatus
+from urbanopay_domains.orders.application.services import OrderService
+from urbanopay_domains.orders.domain.enums import OrderStatus
+from urbanopay_domains.orders.domain.errors import (
     OrderNotAccessibleError,
     OrderRequiresApprovalError,
 )
-from urbanopay.modules.orders.domain.policies import ApprovalPolicy
-from urbanopay.modules.payments.application.services import (
+from urbanopay_domains.orders.domain.policies import ApprovalPolicy
+from urbanopay_domains.payments.application.services import (
     OPERATION_CREATE_PAYMENT,
     PaymentService,
 )
-from urbanopay.modules.payments.domain.enums import (
+from urbanopay_domains.payments.domain.enums import (
     PaymentMethod,
     PaymentStatus,
     ProviderName,
 )
-from urbanopay.modules.payments.domain.errors import (
+from urbanopay_domains.payments.domain.errors import (
     PaymentAlreadyApprovedError,
     PaymentCreationFailedError,
     PaymentStatusUnknownError,
 )
-from urbanopay.providers.payments.fake import FakePaymentProvider
 
 from .fakes import FakeOrdersUnitOfWork, FakePaymentsUnitOfWork, Store
 

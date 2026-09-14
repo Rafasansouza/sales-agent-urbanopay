@@ -19,18 +19,18 @@ import pytest
 from tests.unit.agent.world import ABOVE_APPROVAL_THRESHOLD, RECHARGE_AMOUNT, AgentWorld
 from tests.unit.cards.fakes import make_card
 from tests.unit.identity.fakes import make_customer
-from urbanopay.modules.agent.application import registry, schemas
-from urbanopay.modules.agent.application.executor import ToolExecutor
-from urbanopay.modules.agent.domain.catalog import (
+from urbanopay_agent.application import registry, schemas
+from urbanopay_agent.application.executor import ToolExecutor
+from urbanopay_agent.domain.catalog import (
     BACKEND_ONLY_TOOLS,
     ToolCaller,
     ToolName,
 )
-from urbanopay.modules.agent.domain.results import GuardCode
-from urbanopay.modules.approvals.domain.enums import ApprovalStatus
-from urbanopay.modules.cards.domain.enums import FareProfile
-from urbanopay.modules.orders.domain.enums import OrderStatus
-from urbanopay.modules.payments.domain.enums import PaymentStatus
+from urbanopay_agent.domain.results import GuardCode
+from urbanopay_domains.approvals.domain.enums import ApprovalStatus
+from urbanopay_domains.cards.domain.enums import FareProfile
+from urbanopay_domains.orders.domain.enums import OrderStatus
+from urbanopay_domains.payments.domain.enums import PaymentStatus
 
 FIXED_NOW = datetime(2026, 9, 7, 12, 0, 0, tzinfo=UTC)
 

@@ -33,12 +33,12 @@ O repositório usa um **workspace uv com raiz virtual**:
 
 - a raiz contém `[tool.uv.workspace]`, a configuração compartilhada de Ruff,
   mypy e pytest e o grupo de dependências de desenvolvimento;
-- `apps/api/pyproject.toml` é o pacote real do backend (`urbanopay`);
+- `apps/backend/pyproject.toml` é o pacote real do backend (`urbanopay`);
 - `uv.lock` e `.venv` ficam na raiz, porque um workspace uv possui um único
   lockfile e um único ambiente resolvido.
 
 Essa estrutura permite que Ruff e mypy cubram, com uma única configuração,
-`apps/api/`, `tests/` e `.claude/hooks/`, e que `uv run pytest` seja executado
+`apps/backend/`, `tests/` e `.claude/hooks/`, e que `uv run pytest` seja executado
 a partir da raiz — onde a suíte de testes vive, conforme ADR-001.
 
 ## Regras

@@ -17,16 +17,17 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-SRC_ROOT = REPO_ROOT / "apps" / "api" / "src" / "urbanopay"
+DOMAINS_ROOT = REPO_ROOT / "apps" / "domains" / "src" / "urbanopay_domains"
+MIGRATIONS_ROOT = REPO_ROOT / "apps" / "backend" / "src" / "urbanopay" / "migrations"
 
 # Todo caminho por onde um valor monetário de SPEC-003 transita.
 MONEY_PATHS = (
-    SRC_ROOT / "modules" / "orders",
-    SRC_ROOT / "modules" / "approvals",
-    SRC_ROOT / "modules" / "payments",
-    SRC_ROOT / "core" / "idempotency.py",
-    SRC_ROOT / "db" / "idempotency.py",
-    SRC_ROOT / "providers" / "payments",
+    DOMAINS_ROOT / "orders",
+    DOMAINS_ROOT / "approvals",
+    DOMAINS_ROOT / "payments",
+    DOMAINS_ROOT / "core" / "idempotency.py",
+    DOMAINS_ROOT / "db" / "idempotency.py",
+    DOMAINS_ROOT / "providers" / "payments",
 )
 
 
@@ -69,7 +70,7 @@ def test_caminhos_de_dinheiro_nao_usam_float() -> None:
 @pytest.mark.unit
 def test_migrations_de_spec003_nao_usam_float() -> None:
     """A escala do dinheiro no schema é `Numeric(12, 2)`, nunca ponto flutuante."""
-    versions = SRC_ROOT / "db" / "migrations" / "versions"
+    versions = MIGRATIONS_ROOT / "versions"
     alvos = sorted(versions.glob("*ord0001*.py")) + sorted(versions.glob("*pay0001*.py"))
     assert len(alvos) == 2, "as migrations ord0001 e pay0001 deveriam existir"
 

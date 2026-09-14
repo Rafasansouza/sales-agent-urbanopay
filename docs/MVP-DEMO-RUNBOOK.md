@@ -21,7 +21,7 @@ de pagamento sobem em modo fake, e a demo roda inteira.
 A ordem é garantida pelo Compose e não é opcional:
 
 ```text
-postgres (healthy) → migrate (alembic upgrade head) → api (healthy)
+postgres (healthy) → migrate (alembic upgrade head) → api (healthy) → web
 ```
 
 Se a migration falhar, a API **não sobe**. Schema errado nunca serve tráfego.
@@ -35,8 +35,9 @@ curl http://localhost:8000/ready    # {"status":"ready","database":true,"migrati
 
 | Endereço | O que é |
 |---|---|
-| <http://localhost:8000/dev/chat> | Chat de demonstração |
+| <http://localhost:3000> | **Interface da UrbanoPay** — é por aqui que se demonstra |
 | <http://localhost:8000/docs> | Swagger da API |
+| <http://localhost:8000/dev/chat> | Chat mínimo servido pela API, útil para depurar sem o frontend |
 
 ---
 
@@ -66,8 +67,8 @@ em `APP_ENV=local`.
 
 ## 3. A jornada, no chat
 
-Abra <http://localhost:8000/dev/chat> e converse. O roteiro abaixo é o critério
-de aceite do PRD §18.
+Abra <http://localhost:3000> e converse. O roteiro abaixo é o critério de
+aceite do PRD §18.
 
 ### 3.1 Tarifa, sem login
 
@@ -89,7 +90,7 @@ pública — não exige autenticação (PRD RF-05).
 > **bot:** Enviei um codigo de verificacao. Informe o codigo para continuar.
 
 O OTP é aleatório e **nunca** aparece em log, trace ou resposta. Para a demo,
-clique em **"Ver OTP local"** — ou:
+clique em **"Ver código"** — ou:
 
 ```bash
 curl http://localhost:8000/api/v1/dev/otp
@@ -125,7 +126,8 @@ nunca dispara pagamento (SPEC-004 §11).
 
 ### 3.5 Pagamento aprovado pelo backend
 
-Clique em **"Liquidar Pix (sandbox)"** — ou:
+O painel lateral mostra o **QR do Pix** e o código copiável. Clique em
+**"Simular pagamento"** — ou, por linha de comando:
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/dev/conversations/<conversation_id>/settle \
@@ -164,6 +166,7 @@ Saldo: R$ 21,50 + R$ 100,00 = **R$ 121,50**, creditado exatamente uma vez.
 | *"quero usar o cartão 1257"* | `CARD_NOT_ACCESSIBLE` — indistinguível de um cartão inexistente |
 | *"quero comprar um passe diário"* | Recusa honesta. Sem SPEC de catálogo, nada é inventado (A-05) |
 | Reinicie a API e continue | `docker compose restart api` — a conversa continua de onde parou |
+| `URBANOPAY_DEMO_TOOLS=false` no `.env` | A interface fica como um cliente a veria: sem botão de código nem de simular pagamento |
 
 ---
 
@@ -193,6 +196,8 @@ recomeçar do zero.
 | `/ready` responde `degraded` | O job de migration falhou. `docker compose logs migrate` |
 | Porta 8000 ocupada | `API_PORT=8010` no `.env` |
 | `404` em `/dev/chat` | `APP_ENV` não é `local`. A superfície de demonstração não existe fora dele — por decisão |
+| Porta 3000 ocupada | `WEB_PORT=3010` no `.env` |
+| A interface abre mas não responde | `docker compose logs web api` — provavelmente a API não subiu |
 
 ---
 
@@ -207,4 +212,9 @@ recomeçar do zero.
   definida (A-05); nada é simulado.
 - **Sem aprovação administrativa.** Acima de R$ 200,00 a jornada para, e essa
   parada é o comportamento correto (A-07).
+- **Sem tela de aprovação.** Acima de R$ 200,00 a interface mostra que o
+  pedido aguarda decisão humana e para ali — a superfície administrativa é
+  A-07, e inventá-la seria inventar política.
+- **Sem streaming de tokens.** A resposta chega inteira, por decisão registrada
+  em ADR-011.
 - **Todos os dados são fictícios**, em qualquer ambiente.

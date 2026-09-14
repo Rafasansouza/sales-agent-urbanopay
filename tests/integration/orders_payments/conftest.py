@@ -19,26 +19,26 @@ import pytest_asyncio
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from urbanopay.db.idempotency import IdempotencyRecordModel
-from urbanopay.modules.approvals.infrastructure.models import ApprovalModel
-from urbanopay.modules.cards.infrastructure.models import CardModel
-from urbanopay.modules.identity.infrastructure.models import CustomerModel
-from urbanopay.modules.orders.application.services import OrderService, QuoteService
-from urbanopay.modules.orders.domain.policies import ApprovalPolicy
-from urbanopay.modules.orders.infrastructure.models import (
+from urbanopay.providers.payments.fake import FakePaymentProvider
+from urbanopay_domains.approvals.infrastructure.models import ApprovalModel
+from urbanopay_domains.cards.infrastructure.models import CardModel
+from urbanopay_domains.idempotency_store import IdempotencyRecordModel
+from urbanopay_domains.identity.infrastructure.models import CustomerModel
+from urbanopay_domains.orders.application.services import OrderService, QuoteService
+from urbanopay_domains.orders.domain.policies import ApprovalPolicy
+from urbanopay_domains.orders.infrastructure.models import (
     OrderItemModel,
     OrderModel,
     QuoteItemModel,
     QuoteModel,
 )
-from urbanopay.modules.orders.infrastructure.uow import SqlAlchemyOrdersUnitOfWork
-from urbanopay.modules.payments.application.services import PaymentService
-from urbanopay.modules.payments.infrastructure.models import (
+from urbanopay_domains.orders.infrastructure.uow import SqlAlchemyOrdersUnitOfWork
+from urbanopay_domains.payments.application.services import PaymentService
+from urbanopay_domains.payments.infrastructure.models import (
     PaymentEventModel,
     PaymentModel,
 )
-from urbanopay.modules.payments.infrastructure.uow import SqlAlchemyPaymentsUnitOfWork
-from urbanopay.providers.payments.fake import FakePaymentProvider
+from urbanopay_domains.payments.infrastructure.uow import SqlAlchemyPaymentsUnitOfWork
 
 FIXED_NOW = datetime(2026, 9, 7, 12, 0, 0, tzinfo=UTC)
 TTL = timedelta(minutes=10)

@@ -206,7 +206,7 @@ rejeitar. O PRD §19 mantém "detalhes finais da interface administrativa de
 aprovação" como pendência.
 
 Não existe SPEC, endpoint definido, nem aplicação administrativa na estrutura
-de ADR-001 (`apps/api` e `apps/web` apenas).
+de ADR-001 (`apps/backend` e `apps/frontend` apenas).
 
 **O que precisa ser decidido:** quem aprova, por qual superfície (endpoint
 autenticado, tela administrativa, aplicação separada), com qual modelo de
@@ -221,17 +221,26 @@ direta ao serviço (o que os testes fazem).
 
 ---
 
-## 🟠 A-08 — Stack do frontend sem ADR
+## ✅ A-08 — Stack do frontend sem ADR
 
-**Bloqueia:** qualquer implementação em `apps/web`
-**Fontes:** ADR-001, AGENT-HARNESS §3
+**Resolvido em 2026-09-14** pela aceitação do
+[ADR-011](adr/ADR-011-web-frontend-stack.md) na alternativa **A — Next.js
+(App Router) + TypeScript**, e implementado em `apps/frontend/`.
 
-ADR-001 exige `apps/web` e o harness prevê `.claude/rules/frontend/web.md`, mas
-nenhum documento aceito define a stack. O `.gitignore` cita `.next/` e
-`node_modules/`, o que sugere Next.js — indício, não decisão.
+A decisão veio acompanhada da disciplina que a própria alternativa exigia: um
+segundo servidor no monorepo é lugar tentador para regra de negócio, então o
+**BFF é um proxy burro** — `lib/proxy.ts` é o único ponto que fala com a API e
+nem lê o corpo da resposta. Nenhum enum de domínio é reimplementado no cliente,
+nenhuma aritmética monetária acontece em JavaScript, e nada com prefixo
+`NEXT_PUBLIC_` carrega credencial.
 
-**Encaminhamento:** `ADR-011` foi criado com status **Proposta**. Enquanto não
-for aceito, `apps/web/` contém apenas documentação.
+**Entregue:** conversa, Pix com QR e cópia de código, acompanhamento assíncrono
+que para em estado terminal, masking preservado e nenhum segredo no bundle —
+verificado por job próprio na CI.
+
+**Deliberadamente fora**, e registrado no ADR: streaming de tokens (adiado, por
+o contrato de resposta ser structured output validado) e superfície de aprovação
+humana (bloqueada por **A-07**).
 
 ---
 
@@ -566,7 +575,7 @@ Reproduzidas aqui apenas para consolidar a visão. A fonte permanece o PRD.
 | Item | Bloqueia |
 |---|---|
 | Nome comercial final do agente | Documentação de produto, README, prompts |
-| Identidade visual | `apps/web` |
+| Identidade visual | `apps/frontend` |
 | Regras detalhadas do Passe Diário | SPEC-006 (ver A-05) |
 | Regras detalhadas do Pacote 10 Viagens | SPEC-006 (ver A-05) |
 | Validade exata do QR/bilhete | SPEC-005, SPEC-006 |

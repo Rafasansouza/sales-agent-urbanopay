@@ -11,15 +11,15 @@ from datetime import timedelta
 import pytest
 
 from tests.unit.orders_payments.builders import FIXED_NOW, make_order
-from urbanopay.modules.orders.domain.enums import CancellationReason, OrderStatus
-from urbanopay.modules.orders.domain.errors import (
+from urbanopay_domains.orders.domain.enums import CancellationReason, OrderStatus
+from urbanopay_domains.orders.domain.errors import (
     InvalidOrderStateError,
     InvalidOrderStateTransitionError,
     OrderAlreadyPaidError,
     OrderExpiredError,
     OrderRequiresApprovalError,
 )
-from urbanopay.modules.orders.domain.state_machine import (
+from urbanopay_domains.orders.domain.state_machine import (
     ALLOWED_TRANSITIONS,
     TERMINAL_STATUSES,
     apply_approval_granted,

@@ -18,15 +18,15 @@ from tests.integration.orders_payments.conftest import (
     TTL,
     OrdersPaymentsTestData,
 )
-from urbanopay.modules.approvals.domain.enums import ApprovalStatus
-from urbanopay.modules.approvals.infrastructure.repositories import (
+from urbanopay.providers.payments.fake import FakePaymentProvider
+from urbanopay_domains.approvals.domain.enums import ApprovalStatus
+from urbanopay_domains.approvals.infrastructure.repositories import (
     SqlAlchemyApprovalRepository,
 )
-from urbanopay.modules.orders.application.services import OrderService, QuoteService
-from urbanopay.modules.orders.domain.enums import CancellationReason, OrderStatus
-from urbanopay.modules.payments.application.services import PaymentService
-from urbanopay.modules.payments.domain.enums import PaymentStatus, ProviderName
-from urbanopay.providers.payments.fake import FakePaymentProvider
+from urbanopay_domains.orders.application.services import OrderService, QuoteService
+from urbanopay_domains.orders.domain.enums import CancellationReason, OrderStatus
+from urbanopay_domains.payments.application.services import PaymentService
+from urbanopay_domains.payments.domain.enums import PaymentStatus, ProviderName
 
 
 async def _quote_and_order(

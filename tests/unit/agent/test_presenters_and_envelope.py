@@ -17,18 +17,18 @@ import pytest
 from tests.unit.agent.world import RECHARGE_AMOUNT, AgentWorld
 from tests.unit.cards.fakes import make_card
 from tests.unit.identity.fakes import FIXED_OTP, MARIANA_CPF, make_customer
-from urbanopay.modules.agent.application import presenters
-from urbanopay.modules.agent.application.executor import ToolExecutor
-from urbanopay.modules.agent.domain.catalog import ToolCaller
-from urbanopay.modules.agent.domain.results import OK_CODE, ResultType, ToolResult
-from urbanopay.modules.approvals.domain.enums import ApprovalStatus
-from urbanopay.modules.approvals.domain.results import ApprovalDecision
-from urbanopay.modules.cards.domain.enums import FareProfile
-from urbanopay.modules.fulfillment.domain.entities import Receipt
-from urbanopay.modules.fulfillment.domain.enums import DocumentKind
-from urbanopay.modules.payments.domain.entities import Payment
-from urbanopay.modules.payments.domain.enums import PaymentMethod, PaymentStatus, ProviderName
-from urbanopay.modules.payments.domain.results import (
+from urbanopay_agent.application import presenters
+from urbanopay_agent.application.executor import ToolExecutor
+from urbanopay_agent.domain.catalog import ToolCaller
+from urbanopay_agent.domain.results import OK_CODE, ResultType, ToolResult
+from urbanopay_domains.approvals.domain.enums import ApprovalStatus
+from urbanopay_domains.approvals.domain.results import ApprovalDecision
+from urbanopay_domains.cards.domain.enums import FareProfile
+from urbanopay_domains.fulfillment.domain.entities import Receipt
+from urbanopay_domains.fulfillment.domain.enums import DocumentKind
+from urbanopay_domains.payments.domain.entities import Payment
+from urbanopay_domains.payments.domain.enums import PaymentMethod, PaymentStatus, ProviderName
+from urbanopay_domains.payments.domain.results import (
     OrderPaymentStatus,
     PaymentCreationResult,
 )
@@ -158,7 +158,7 @@ def test_comprovante_sai_mascarado_e_qualificado_como_simulado() -> None:
 
 @pytest.mark.unit
 def test_identificacao_nao_expoe_desafio_nem_documento() -> None:
-    from urbanopay.modules.identity.domain.results import (
+    from urbanopay_domains.identity.domain.results import (
         IdentificationStatus,
         StartAuthenticationResult,
     )
@@ -177,7 +177,7 @@ def test_identificacao_nao_expoe_desafio_nem_documento() -> None:
 
 @pytest.mark.unit
 def test_verificacao_nao_expoe_otp_nem_customer_id() -> None:
-    from urbanopay.modules.identity.domain.results import VerificationResult, VerificationStatus
+    from urbanopay_domains.identity.domain.results import VerificationResult, VerificationStatus
 
     data = presenters.verification(
         VerificationResult(status=VerificationStatus.AUTHENTICATED, customer_id=uuid.uuid4())

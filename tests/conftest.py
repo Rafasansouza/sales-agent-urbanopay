@@ -21,8 +21,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from urbanopay.core.config import Settings, get_settings
-from urbanopay.core.event_loop import selector_loop_factory
 from urbanopay.main import create_app
+from urbanopay_database.event_loop import selector_loop_factory
 
 if TYPE_CHECKING:
     import asyncio

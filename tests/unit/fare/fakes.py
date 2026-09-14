@@ -13,10 +13,10 @@ import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
 
-from urbanopay.modules.fare.domain.entities import Fare, FareRule
-from urbanopay.modules.fare.domain.enums import FareProfile, TransportMode, TripType
-from urbanopay.modules.fare.domain.errors import FareServiceUnavailableError
-from urbanopay.modules.fare.domain.value_objects import FareLookupKey
+from urbanopay_domains.fare.domain.entities import Fare, FareRule
+from urbanopay_domains.fare.domain.enums import FareProfile, TransportMode, TripType
+from urbanopay_domains.fare.domain.errors import FareServiceUnavailableError
+from urbanopay_domains.fare.domain.value_objects import FareLookupKey
 
 # Instante de referência fixo dos testes: dentro da vigência oficial fictícia
 # (2026-01-01Z, decisão aprovada do MVP) e determinístico.

@@ -19,30 +19,30 @@ import pytest_asyncio
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from urbanopay.modules.cards.infrastructure.models import CardModel
-from urbanopay.modules.fulfillment.application.services import (
+from urbanopay_domains.cards.infrastructure.models import CardModel
+from urbanopay_domains.fulfillment.application.services import (
     FulfillmentRecoveryService,
     FulfillmentService,
 )
-from urbanopay.modules.fulfillment.infrastructure.models import (
+from urbanopay_domains.fulfillment.infrastructure.models import (
     CardLedgerEntryModel,
     FulfillmentModel,
     ReceiptModel,
 )
-from urbanopay.modules.fulfillment.infrastructure.repositories import (
+from urbanopay_domains.fulfillment.infrastructure.repositories import (
     SqlAlchemyFulfillmentRecoveryPort,
 )
-from urbanopay.modules.fulfillment.infrastructure.uow import (
+from urbanopay_domains.fulfillment.infrastructure.uow import (
     SqlAlchemyFulfillmentUnitOfWork,
 )
-from urbanopay.modules.identity.infrastructure.models import CustomerModel
-from urbanopay.modules.orders.infrastructure.models import (
+from urbanopay_domains.identity.infrastructure.models import CustomerModel
+from urbanopay_domains.orders.infrastructure.models import (
     OrderItemModel,
     OrderModel,
     QuoteItemModel,
     QuoteModel,
 )
-from urbanopay.modules.payments.infrastructure.models import PaymentModel
+from urbanopay_domains.payments.infrastructure.models import PaymentModel
 
 FIXED_NOW = datetime(2026, 9, 7, 12, 0, 0, tzinfo=UTC)
 LATER = FIXED_NOW + timedelta(minutes=1)

@@ -24,7 +24,7 @@ from alembic import command
 
 from tests.integration.conftest import alembic_config
 from urbanopay.core.config import Settings
-from urbanopay.db.engine import build_database_url
+from urbanopay_database.engine import build_database_url
 
 # Os totais do conjunto de referência do MVP: 12 tarifas (5 linhas de ônibus ×
 # 2 perfis + metrô × 2 perfis) e 1 regra de INTEGRATION (SPEC-001 §2, §5).

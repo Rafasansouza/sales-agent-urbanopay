@@ -9,16 +9,16 @@ from decimal import Decimal
 import pytest
 
 from tests.unit.fulfillment.builders import FIXED_NOW, LATER, make_fulfillment
-from urbanopay.modules.fulfillment.domain.entities import CreditApplication, Fulfillment
-from urbanopay.modules.fulfillment.domain.enums import (
+from urbanopay_domains.fulfillment.domain.entities import CreditApplication, Fulfillment
+from urbanopay_domains.fulfillment.domain.enums import (
     DocumentKind,
     FailureClass,
     FulfillmentStatus,
     FulfillmentType,
     LedgerEntryType,
 )
-from urbanopay.modules.fulfillment.domain.errors import UnsupportedFulfillmentTypeError
-from urbanopay.modules.fulfillment.domain.state_machine import (
+from urbanopay_domains.fulfillment.domain.errors import UnsupportedFulfillmentTypeError
+from urbanopay_domains.fulfillment.domain.state_machine import (
     ALLOWED_TRANSITIONS,
     TERMINAL_STATUSES,
     InvalidFulfillmentTransitionError,

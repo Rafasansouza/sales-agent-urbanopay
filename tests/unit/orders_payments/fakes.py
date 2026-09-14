@@ -22,28 +22,28 @@ import uuid
 from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, Self
 
-from urbanopay.core.idempotency import (
+from urbanopay_database.idempotency import (
     IdempotencyClaim,
     IdempotencyRecord,
     IdempotencyStatus,
 )
-from urbanopay.modules.payments.domain.entities import (
+from urbanopay_domains.payments.domain.entities import (
     ACTIVE_PAYMENT_STATUSES,
     Payment,
 )
-from urbanopay.modules.payments.domain.enums import PaymentStatus
+from urbanopay_domains.payments.domain.enums import PaymentStatus
 
 if TYPE_CHECKING:
     from datetime import datetime
 
-    from urbanopay.core.idempotency import IdempotencyRepository
-    from urbanopay.modules.approvals.domain.entities import Approval
-    from urbanopay.modules.approvals.domain.ports import ApprovalRepository
-    from urbanopay.modules.orders.domain.entities import Order, Quote
-    from urbanopay.modules.orders.domain.ports import OrderRepository, QuoteRepository
-    from urbanopay.modules.payments.domain.entities import PaymentEvent
-    from urbanopay.modules.payments.domain.enums import ProviderName
-    from urbanopay.modules.payments.domain.ports import (
+    from urbanopay_database.idempotency import IdempotencyRepository
+    from urbanopay_domains.approvals.domain.entities import Approval
+    from urbanopay_domains.approvals.domain.ports import ApprovalRepository
+    from urbanopay_domains.orders.domain.entities import Order, Quote
+    from urbanopay_domains.orders.domain.ports import OrderRepository, QuoteRepository
+    from urbanopay_domains.payments.domain.entities import PaymentEvent
+    from urbanopay_domains.payments.domain.enums import ProviderName
+    from urbanopay_domains.payments.domain.ports import (
         PaymentEventRepository,
         PaymentRepository,
     )

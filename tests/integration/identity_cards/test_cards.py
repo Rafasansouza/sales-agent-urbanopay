@@ -10,13 +10,13 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from tests.integration.identity_cards.conftest import FIXED_NOW, IdentityCardsTestData
-from urbanopay.modules.cards.application.services import CardService
-from urbanopay.modules.cards.domain.enums import CardStatus, FareProfile, FareProfileSource
-from urbanopay.modules.cards.domain.errors import CardNotAccessibleError, CardNotActiveError
-from urbanopay.modules.cards.domain.value_objects import ProfileSignal
-from urbanopay.modules.cards.infrastructure.repositories import SqlAlchemyCardRepository
-from urbanopay.modules.fare.application.services import FareService, SegmentInput
-from urbanopay.modules.fare.infrastructure.repositories import (
+from urbanopay_domains.cards.application.services import CardService
+from urbanopay_domains.cards.domain.enums import CardStatus, FareProfile, FareProfileSource
+from urbanopay_domains.cards.domain.errors import CardNotAccessibleError, CardNotActiveError
+from urbanopay_domains.cards.domain.value_objects import ProfileSignal
+from urbanopay_domains.cards.infrastructure.repositories import SqlAlchemyCardRepository
+from urbanopay_domains.fare.application.services import FareService, SegmentInput
+from urbanopay_domains.fare.infrastructure.repositories import (
     SqlAlchemyFareRepository,
     SqlAlchemyFareRuleRepository,
 )

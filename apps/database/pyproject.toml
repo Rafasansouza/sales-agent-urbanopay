@@ -1,0 +1,32 @@
+# =============================================================================
+# apps/database — foundation de persistência (ADR-012, ADR-017)
+# =============================================================================
+# Camada mais baixa do produto: **não depende de nenhum outro pacote interno**.
+# É isso que torna a direção `database ← domains ← agent ← backend` verificável
+# pelo próprio resolvedor, e não apenas por revisão.
+#
+# Carrega, além da persistência, os contratos transversais que precisam estar
+# abaixo de todos: o `Protocol` do Unit of Work, o contrato de idempotência, a
+# política de event loop e `DatabaseSettings`.
+# =============================================================================
+
+[project]
+name = "urbanopay-database"
+version = "0.1.0"
+description = "Foundation de persistência e contratos transversais da UrbanoPay"
+readme = "README.md"
+requires-python = ">=3.13,<3.14"
+
+dependencies = [
+    "sqlalchemy[asyncio]>=2.0",
+    "psycopg[binary]>=3.2",
+    "pydantic>=2.10",
+    "pydantic-settings>=2.7",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/urbanopay_database"]

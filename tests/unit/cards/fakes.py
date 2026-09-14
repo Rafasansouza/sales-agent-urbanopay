@@ -6,8 +6,8 @@ import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
 
-from urbanopay.modules.cards.domain.entities import Card
-from urbanopay.modules.cards.domain.enums import CardStatus, FareProfile
+from urbanopay_domains.cards.domain.entities import Card
+from urbanopay_domains.cards.domain.enums import CardStatus, FareProfile
 
 FIXED_NOW = datetime(2026, 9, 7, 12, 0, 0, tzinfo=UTC)
 

@@ -23,8 +23,8 @@ from alembic.config import Config as AlembicConfig
 from fastapi.testclient import TestClient
 
 from urbanopay.core.config import get_settings
-from urbanopay.core.event_loop import ensure_selector_event_loop_policy
 from urbanopay.main import create_app
+from urbanopay_database.event_loop import ensure_selector_event_loop_policy
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -35,7 +35,7 @@ def migrated_e2e() -> None:
     cfg = AlembicConfig(str(REPO_ROOT / "alembic.ini"))
     cfg.set_main_option(
         "script_location",
-        str(REPO_ROOT / "apps" / "api" / "src" / "urbanopay" / "db" / "migrations"),
+        str(REPO_ROOT / "apps" / "backend" / "src" / "urbanopay" / "migrations"),
     )
     command.upgrade(cfg, "head")
 

@@ -22,7 +22,7 @@ from tests.integration.fulfillment.conftest import (
     FulfillmentTestData,
     Scenario,
 )
-from urbanopay.modules.fulfillment.infrastructure.models import (
+from urbanopay_domains.fulfillment.infrastructure.models import (
     CardLedgerEntryModel,
     FulfillmentModel,
     ReceiptModel,
@@ -442,7 +442,7 @@ async def test_saldo_do_cartao_nunca_fica_negativo(
     """`ck_cards_balance_non_negative`, herdada da SPEC-002."""
     import sqlalchemy as sa
 
-    from urbanopay.modules.cards.infrastructure.models import CardModel
+    from urbanopay_domains.cards.infrastructure.models import CardModel
 
     cenario = await data.add_scenario(balance=Decimal("10.00"))
 

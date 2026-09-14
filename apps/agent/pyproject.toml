@@ -1,0 +1,36 @@
+# =============================================================================
+# apps/agent — camada conversacional (SPEC-004, ADR-002, ADR-017)
+# =============================================================================
+# O Sales Agent: catálogo fechado de tools, executor, playbooks, grafo LangGraph,
+# providers de LLM e o router do próprio endpoint de conversa.
+#
+# Depende de `urbanopay-domains` para alcançar os serviços de aplicação, e
+# **não depende de `urbanopay`**: quem monta a aplicação é o backend, e inverter
+# essa seta criaria o ciclo que o ADR-017 existe para evitar.
+#
+# Note o que **não** está aqui: `langgraph-checkpoint-postgres`. ADR-014 rejeita
+# checkpointer durável nativo, e um teste de arquitetura reprova sua presença.
+# =============================================================================
+
+[project]
+name = "urbanopay-agent"
+version = "0.1.0"
+description = "Sales Agent conversacional da UrbanoPay Mobilidade"
+readme = "README.md"
+requires-python = ">=3.13,<3.14"
+
+dependencies = [
+    "urbanopay-database",
+    "urbanopay-domains",
+    "fastapi>=0.115",
+    "pydantic>=2.10",
+    "langgraph>=1.2,<2",
+    "openai>=1.60",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/urbanopay_agent"]

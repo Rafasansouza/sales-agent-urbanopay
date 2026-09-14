@@ -1,8 +1,8 @@
 ---
 paths:
-  - apps/api/src/urbanopay/modules/fulfillment/**
-  - apps/api/src/urbanopay/modules/tickets/**
-  - apps/api/src/urbanopay/modules/postsale/**
+  - apps/backend/src/urbanopay/modules/fulfillment/**
+  - apps/backend/src/urbanopay/modules/tickets/**
+  - apps/backend/src/urbanopay/modules/postsale/**
 ---
 
 # Regra — Fulfillment & Post-sale

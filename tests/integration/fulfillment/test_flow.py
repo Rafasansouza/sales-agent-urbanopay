@@ -11,12 +11,12 @@ from decimal import Decimal
 import pytest
 
 from tests.integration.fulfillment.conftest import LATER, FulfillmentTestData
-from urbanopay.modules.fulfillment.application.services import (
+from urbanopay_domains.fulfillment.application.services import (
     FulfillmentRecoveryService,
     FulfillmentService,
 )
-from urbanopay.modules.fulfillment.domain.enums import DocumentKind, FulfillmentStatus
-from urbanopay.modules.fulfillment.domain.errors import (
+from urbanopay_domains.fulfillment.domain.enums import DocumentKind, FulfillmentStatus
+from urbanopay_domains.fulfillment.domain.errors import (
     EffectConflictError,
     OrderNotPaidError,
     ReceiptNotAvailableError,
@@ -184,7 +184,7 @@ async def test_reentrada_apos_reconciliacao_conclui_a_entrega(
     """Cartão reativado permite concluir, sem nova cobrança (§5.1)."""
     import sqlalchemy as sa
 
-    from urbanopay.modules.cards.infrastructure.models import CardModel
+    from urbanopay_domains.cards.infrastructure.models import CardModel
 
     cenario = await data.add_scenario(
         card_status="BLOCKED", total=Decimal("30.00"), balance=Decimal("0.00")
@@ -242,7 +242,7 @@ async def test_fulfillment_completed_sem_ledger_e_detectado_e_nao_credita(
     """Inconsistência grave: reporta, recusa e não regride (§12.1)."""
     import sqlalchemy as sa
 
-    from urbanopay.modules.fulfillment.infrastructure.models import CardLedgerEntryModel
+    from urbanopay_domains.fulfillment.infrastructure.models import CardLedgerEntryModel
 
     cenario = await data.add_scenario(total=Decimal("25.00"), balance=Decimal("0.00"))
     await fulfillment_service.fulfill_order(order_id=cenario.order_id, at=LATER)

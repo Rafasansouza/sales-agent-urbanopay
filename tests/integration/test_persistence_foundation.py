@@ -15,7 +15,7 @@ from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from tests.integration.conftest import PROBE_SCHEMA, FoundationProbe
-from urbanopay.db.unit_of_work import SqlAlchemyUnitOfWork
+from urbanopay_database.unit_of_work import SqlAlchemyUnitOfWork
 
 # ---------------------------------------------------------------------------
 # Conexão e driver
@@ -232,7 +232,7 @@ async def test_naming_convention_aplicada_no_banco(
 ) -> None:
     """Constraints e índices ganham nomes determinísticos no PostgreSQL.
 
-    A convenção usada pela sonda é importada de `urbanopay.db.base`, portanto
+    A convenção usada pela sonda é importada de `urbanopay_database.base`, portanto
     este teste prova a convenção de produção, não uma cópia.
     """
 

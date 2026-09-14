@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 import pytest
 
 from tests.unit.orders_payments.builders import FIXED_NOW
-from urbanopay.core.idempotency import (
+from urbanopay_database.idempotency import (
     IdempotencyConflictError,
     IdempotencyRecord,
     IdempotencyStatus,

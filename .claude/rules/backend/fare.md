@@ -1,7 +1,7 @@
 ---
 description: Regras do Fare Engine (SPEC-001). Cálculo tarifário determinístico.
 paths:
-  - "apps/api/src/urbanopay/modules/fare/**"
+  - "apps/backend/src/urbanopay/modules/fare/**"
   - "tests/**/fare/**"
   - "tests/**/*fare*"
 ---

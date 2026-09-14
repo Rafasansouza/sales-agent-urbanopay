@@ -11,7 +11,7 @@ from typing import Any
 
 import pytest
 
-from urbanopay.modules.payments.domain.entities import (
+from urbanopay_domains.payments.domain.entities import (
     PERSISTABLE_EVENT_KEYS,
     redact_event_payload,
 )

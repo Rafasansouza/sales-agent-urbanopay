@@ -30,33 +30,33 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from tests.unit.identity.fakes import FakeOtpGenerator
 from urbanopay.core.config import Settings
-from urbanopay.modules.agent.application.executor import ToolExecutor
-from urbanopay.modules.agent.domain.conversation import ConversationState
-from urbanopay.modules.agent.infrastructure.composition import (
+from urbanopay.providers.payments.fake import FakePaymentProvider
+from urbanopay_agent.application.executor import ToolExecutor
+from urbanopay_agent.domain.conversation import ConversationState
+from urbanopay_agent.infrastructure.composition import (
     AgentServices,
     build_agent_services,
 )
-from urbanopay.modules.approvals.infrastructure.models import ApprovalModel
-from urbanopay.modules.cards.infrastructure.models import CardModel
-from urbanopay.modules.fulfillment.infrastructure.models import (
+from urbanopay_domains.approvals.infrastructure.models import ApprovalModel
+from urbanopay_domains.cards.infrastructure.models import CardModel
+from urbanopay_domains.fulfillment.infrastructure.models import (
     CardLedgerEntryModel,
     FulfillmentModel,
     ReceiptModel,
 )
-from urbanopay.modules.identity.domain.value_objects import IdentityHasher
-from urbanopay.modules.identity.infrastructure.models import (
+from urbanopay_domains.identity.domain.value_objects import IdentityHasher
+from urbanopay_domains.identity.infrastructure.models import (
     AuthChallengeModel,
     CustomerModel,
     SessionModel,
 )
-from urbanopay.modules.orders.infrastructure.models import (
+from urbanopay_domains.orders.infrastructure.models import (
     OrderItemModel,
     OrderModel,
     QuoteItemModel,
     QuoteModel,
 )
-from urbanopay.modules.payments.infrastructure.models import PaymentEventModel, PaymentModel
-from urbanopay.providers.payments.fake import FakePaymentProvider
+from urbanopay_domains.payments.infrastructure.models import PaymentEventModel, PaymentModel
 
 FIXED_NOW = datetime(2026, 9, 7, 12, 0, 0, tzinfo=UTC)
 FIXED_OTP = "123456"
@@ -318,13 +318,22 @@ def services(
     hasher: IdentityHasher,
     provider: FakePaymentProvider,
 ) -> AgentServices:
-    """Composition root real, com os dois dublês que a SPEC autoriza."""
+    """Composition root real, com os dois dublês que a SPEC autoriza.
+
+    Os TTLs chegam como **valores**, não como `Settings` (ADR-017): a camada
+    conversacional não conhece a configuração da aplicação. O teste passa os
+    mesmos valores que o container de produção passaria.
+    """
     return build_agent_services(
         session_factory,
-        settings=settings,
         hasher=hasher,
         otp_generator=FakeOtpGenerator(FIXED_OTP),
         payment_provider=provider,
+        session_ttl_minutes=settings.session_ttl_minutes,
+        otp_ttl_minutes=settings.otp_ttl_minutes,
+        otp_max_attempts=settings.otp_max_attempts,
+        quote_ttl_minutes=settings.quote_ttl_minutes,
+        order_draft_ttl_minutes=settings.order_draft_ttl_minutes,
     )
 
 

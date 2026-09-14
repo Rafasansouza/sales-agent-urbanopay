@@ -15,7 +15,7 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-FARE_ROOT = REPO_ROOT / "apps" / "api" / "src" / "urbanopay" / "modules" / "fare"
+FARE_ROOT = REPO_ROOT / "apps" / "domains" / "src" / "urbanopay_domains" / "fare"
 
 
 def find_float_usages(source: str) -> list[str]:

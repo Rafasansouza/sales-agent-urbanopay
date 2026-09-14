@@ -102,7 +102,7 @@ Fonte: ADR-012 (Aceito).
 ## Estado atual do repositório
 
 A **persistence foundation está implementada** em
-`apps/api/src/urbanopay/db/` (base, engine, session, Unit of Work, registry e
+`apps/backend/src/urbanopay/db/` (base, engine, session, Unit of Work, registry e
 ambiente Alembic), com SQLAlchemy 2.0.x, psycopg 3.3.x e Alembic 1.19.x
 validados em Python 3.13.
 

@@ -122,7 +122,7 @@ a árvore documenta a direção arquitetural, e a implementação nasce em taref
 posterior.
 
 ```text
-apps/api/src/urbanopay/
+apps/backend/src/urbanopay/
 ├── core/
 │   └── persistence.py            # Protocol do UnitOfWork, sem SQLAlchemy
 ├── db/

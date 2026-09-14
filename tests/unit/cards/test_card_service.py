@@ -8,9 +8,9 @@ from decimal import Decimal
 import pytest
 
 from tests.unit.cards.fakes import InMemoryCardRepository, make_card
-from urbanopay.modules.cards.application.services import CardService
-from urbanopay.modules.cards.domain.enums import CardStatus, FareProfile
-from urbanopay.modules.cards.domain.errors import CardNotAccessibleError
+from urbanopay_domains.cards.application.services import CardService
+from urbanopay_domains.cards.domain.enums import CardStatus, FareProfile
+from urbanopay_domains.cards.domain.errors import CardNotAccessibleError
 
 MARIANA = uuid.UUID("00000000-0000-4000-8000-0000000000a1")
 LUCAS = uuid.UUID("00000000-0000-4000-8000-0000000000a2")

@@ -14,16 +14,16 @@ from tests.integration.identity_cards.conftest import (
     IdentityCardsTestData,
     build_services,
 )
-from urbanopay.modules.identity.domain.errors import (
+from urbanopay_domains.identity.domain.errors import (
     AuthenticationChallengeNotFoundError,
     SessionExpiredError,
 )
-from urbanopay.modules.identity.domain.results import (
+from urbanopay_domains.identity.domain.results import (
     IdentificationStatus,
     VerificationStatus,
 )
-from urbanopay.modules.identity.domain.value_objects import IdentityHasher
-from urbanopay.modules.identity.infrastructure.models import AuthChallengeModel, SessionModel
+from urbanopay_domains.identity.domain.value_objects import IdentityHasher
+from urbanopay_domains.identity.infrastructure.models import AuthChallengeModel, SessionModel
 
 
 @pytest.mark.integration

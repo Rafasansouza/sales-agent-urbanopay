@@ -18,18 +18,18 @@ from decimal import Decimal
 import pytest
 
 from tests.unit.agent.world import RECHARGE_AMOUNT, AgentWorld
-from urbanopay.modules.agent.application.executor import ToolExecutor
-from urbanopay.modules.agent.domain.catalog import ToolCaller
-from urbanopay.modules.agent.domain.conversation import ConversationState
-from urbanopay.modules.agent.domain.idempotency_keys import IdempotencyKeyPolicy
-from urbanopay.modules.agent.domain.results import NextAction
-from urbanopay.modules.orders.application.services import (
+from urbanopay_agent.application.executor import ToolExecutor
+from urbanopay_agent.domain.catalog import ToolCaller
+from urbanopay_agent.domain.conversation import ConversationState
+from urbanopay_agent.domain.idempotency_keys import IdempotencyKeyPolicy
+from urbanopay_agent.domain.results import NextAction
+from urbanopay_domains.orders.application.services import (
     OPERATION_CONFIRM_ORDER,
     OPERATION_CREATE_ORDER,
 )
-from urbanopay.modules.orders.domain.enums import OrderStatus
-from urbanopay.modules.payments.application.services import OPERATION_CREATE_PAYMENT
-from urbanopay.modules.payments.domain.enums import PaymentStatus
+from urbanopay_domains.orders.domain.enums import OrderStatus
+from urbanopay_domains.payments.application.services import OPERATION_CREATE_PAYMENT
+from urbanopay_domains.payments.domain.enums import PaymentStatus
 
 FIXED_NOW = datetime(2026, 9, 7, 12, 0, 0, tzinfo=UTC)
 

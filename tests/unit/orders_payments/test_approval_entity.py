@@ -8,9 +8,9 @@ from datetime import timedelta
 import pytest
 
 from tests.unit.orders_payments.builders import FIXED_NOW, make_approval
-from urbanopay.modules.approvals.domain.enums import ApprovalStatus
-from urbanopay.modules.approvals.domain.errors import InvalidApprovalStateError
-from urbanopay.modules.orders.domain.enums import OrderStatus
+from urbanopay_domains.approvals.domain.enums import ApprovalStatus
+from urbanopay_domains.approvals.domain.errors import InvalidApprovalStateError
+from urbanopay_domains.orders.domain.enums import OrderStatus
 
 DECIDED_AT = FIXED_NOW + timedelta(minutes=5)
 ACTOR = "operator-7"

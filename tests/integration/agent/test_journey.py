@@ -18,15 +18,15 @@ from decimal import Decimal
 import pytest
 
 from tests.integration.agent.conftest import FIXED_OTP, AgentTestData
-from urbanopay.modules.agent.application.executor import ExecutionOutcome, ToolExecutor
-from urbanopay.modules.agent.domain.catalog import ToolCaller
-from urbanopay.modules.agent.domain.conversation import ConversationState
-from urbanopay.modules.agent.domain.idempotency_keys import IdempotencyKeyPolicy
-from urbanopay.modules.agent.domain.results import GuardCode, NextAction
-from urbanopay.modules.agent.infrastructure.composition import AgentServices
-from urbanopay.modules.fulfillment.domain.errors import ReconciliationRequiredError
-from urbanopay.modules.payments.domain.enums import PaymentStatus
 from urbanopay.providers.payments.fake import FakePaymentProvider
+from urbanopay_agent.application.executor import ExecutionOutcome, ToolExecutor
+from urbanopay_agent.domain.catalog import ToolCaller
+from urbanopay_agent.domain.conversation import ConversationState
+from urbanopay_agent.domain.idempotency_keys import IdempotencyKeyPolicy
+from urbanopay_agent.domain.results import GuardCode, NextAction
+from urbanopay_agent.infrastructure.composition import AgentServices
+from urbanopay_domains.fulfillment.domain.errors import ReconciliationRequiredError
+from urbanopay_domains.payments.domain.enums import PaymentStatus
 
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
 

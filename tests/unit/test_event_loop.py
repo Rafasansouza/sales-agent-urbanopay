@@ -16,7 +16,7 @@ import sys
 
 import pytest
 
-from urbanopay.core.event_loop import (
+from urbanopay_database.event_loop import (
     ensure_selector_event_loop_policy,
     selector_loop_factory,
 )

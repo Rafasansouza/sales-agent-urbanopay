@@ -9,13 +9,13 @@ from decimal import Decimal
 import pytest
 
 from tests.unit.orders_payments.builders import FIXED_NOW, make_order, make_quote
-from urbanopay.modules.orders.domain.entities import (
+from urbanopay_domains.orders.domain.entities import (
     RECHARGE_ITEM_DESCRIPTION,
     LineItem,
     validate_money_amount,
 )
-from urbanopay.modules.orders.domain.enums import OperationType, OrderStatus
-from urbanopay.modules.orders.domain.errors import (
+from urbanopay_domains.orders.domain.enums import OperationType, OrderStatus
+from urbanopay_domains.orders.domain.errors import (
     InvalidRechargeAmountError,
     QuoteExpiredError,
     UnsupportedOperationTypeError,

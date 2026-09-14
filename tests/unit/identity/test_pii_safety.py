@@ -17,13 +17,13 @@ from tests.unit.identity.fakes import (
     build_hasher,
     make_customer,
 )
-from urbanopay.modules.identity.application.services import (
+from urbanopay_domains.identity.application.services import (
     AuthenticationService,
     SessionService,
 )
-from urbanopay.modules.identity.domain.entities import OTPChallenge
-from urbanopay.modules.identity.domain.enums import ChallengeStatus
-from urbanopay.modules.identity.domain.errors import (
+from urbanopay_domains.identity.domain.entities import OTPChallenge
+from urbanopay_domains.identity.domain.enums import ChallengeStatus
+from urbanopay_domains.identity.domain.errors import (
     AuthenticationChallengeNotFoundError,
     NotAuthenticatedError,
     SessionExpiredError,

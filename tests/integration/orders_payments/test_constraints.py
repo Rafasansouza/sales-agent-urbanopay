@@ -21,10 +21,10 @@ from tests.integration.orders_payments.conftest import (
     TTL,
     OrdersPaymentsTestData,
 )
-from urbanopay.db.idempotency import IdempotencyRecordModel
-from urbanopay.modules.approvals.infrastructure.models import ApprovalModel
-from urbanopay.modules.orders.infrastructure.models import OrderModel, QuoteModel
-from urbanopay.modules.payments.infrastructure.models import (
+from urbanopay_domains.approvals.infrastructure.models import ApprovalModel
+from urbanopay_domains.idempotency_store import IdempotencyRecordModel
+from urbanopay_domains.orders.infrastructure.models import OrderModel, QuoteModel
+from urbanopay_domains.payments.infrastructure.models import (
     PaymentEventModel,
     PaymentModel,
 )

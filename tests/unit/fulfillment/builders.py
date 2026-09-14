@@ -9,14 +9,14 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
-from urbanopay.modules.cards.domain.entities import Card
-from urbanopay.modules.cards.domain.enums import CardStatus, FareProfile
-from urbanopay.modules.fulfillment.domain.entities import (
+from urbanopay_domains.cards.domain.entities import Card
+from urbanopay_domains.cards.domain.enums import CardStatus, FareProfile
+from urbanopay_domains.fulfillment.domain.entities import (
     CardLedgerEntry,
     Fulfillment,
     Receipt,
 )
-from urbanopay.modules.fulfillment.domain.enums import (
+from urbanopay_domains.fulfillment.domain.enums import (
     CURRENCY_BRL,
     DISCLAIMER_VERSION,
     DocumentKind,
@@ -25,10 +25,10 @@ from urbanopay.modules.fulfillment.domain.enums import (
     FulfillmentType,
     LedgerEntryType,
 )
-from urbanopay.modules.orders.domain.entities import LineItem, Order
-from urbanopay.modules.orders.domain.enums import OperationType, OrderStatus
-from urbanopay.modules.payments.domain.entities import Payment
-from urbanopay.modules.payments.domain.enums import (
+from urbanopay_domains.orders.domain.entities import LineItem, Order
+from urbanopay_domains.orders.domain.enums import OperationType, OrderStatus
+from urbanopay_domains.payments.domain.entities import Payment
+from urbanopay_domains.payments.domain.enums import (
     PaymentMethod,
     PaymentStatus,
     ProviderName,

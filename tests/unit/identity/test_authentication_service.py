@@ -16,18 +16,18 @@ from tests.unit.identity.fakes import (
     build_hasher,
     make_customer,
 )
-from urbanopay.modules.identity.application.services import (
+from urbanopay_domains.identity.application.services import (
     AuthenticationService,
     SessionService,
 )
-from urbanopay.modules.identity.domain.entities import Customer, Session
-from urbanopay.modules.identity.domain.enums import ChallengeStatus, CustomerStatus
-from urbanopay.modules.identity.domain.errors import (
+from urbanopay_domains.identity.domain.entities import Customer, Session
+from urbanopay_domains.identity.domain.enums import ChallengeStatus, CustomerStatus
+from urbanopay_domains.identity.domain.errors import (
     AuthenticationChallengeNotFoundError,
     SessionExpiredError,
     SessionNotFoundError,
 )
-from urbanopay.modules.identity.domain.results import (
+from urbanopay_domains.identity.domain.results import (
     IdentificationStatus,
     VerificationStatus,
 )

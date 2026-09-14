@@ -9,23 +9,23 @@ from decimal import Decimal
 import pytest
 
 from tests.unit.orders_payments.builders import FIXED_NOW, TTL, make_quote
-from urbanopay.core.idempotency import (
+from urbanopay_database.idempotency import (
     IdempotencyConflictError,
     IdempotencyStatus,
 )
-from urbanopay.modules.approvals.domain.enums import ApprovalStatus
-from urbanopay.modules.approvals.domain.errors import (
+from urbanopay_domains.approvals.domain.enums import ApprovalStatus
+from urbanopay_domains.approvals.domain.errors import (
     ApprovalNotFoundError,
     InvalidApprovalStateError,
 )
-from urbanopay.modules.orders.application.services import (
+from urbanopay_domains.orders.application.services import (
     OPERATION_CONFIRM_ORDER,
     OPERATION_CREATE_ORDER,
     OrderService,
     QuoteService,
 )
-from urbanopay.modules.orders.domain.enums import CancellationReason, OrderStatus
-from urbanopay.modules.orders.domain.errors import (
+from urbanopay_domains.orders.domain.enums import CancellationReason, OrderStatus
+from urbanopay_domains.orders.domain.errors import (
     InvalidOrderStateError,
     OrderExpiredError,
     OrderNotAccessibleError,
@@ -34,7 +34,7 @@ from urbanopay.modules.orders.domain.errors import (
     QuoteExpiredError,
     QuoteNotAccessibleError,
 )
-from urbanopay.modules.orders.domain.policies import ApprovalPolicy
+from urbanopay_domains.orders.domain.policies import ApprovalPolicy
 
 from .fakes import FakeOrdersUnitOfWork, Store
 

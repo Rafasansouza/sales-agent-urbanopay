@@ -14,9 +14,9 @@ from tests.unit.fare.fakes import (
     OFFICIAL_BUS_FARES,
     OFFICIAL_METRO_FARES,
 )
-from urbanopay.modules.fare.domain.enums import FareProfile, TransportMode, TripType
-from urbanopay.modules.fare.domain.value_objects import FareLookupKey
-from urbanopay.modules.fare.infrastructure.repositories import (
+from urbanopay_domains.fare.domain.enums import FareProfile, TransportMode, TripType
+from urbanopay_domains.fare.domain.value_objects import FareLookupKey
+from urbanopay_domains.fare.infrastructure.repositories import (
     SqlAlchemyFareRepository,
     SqlAlchemyFareRuleRepository,
 )

@@ -7,7 +7,7 @@ import uuid
 import pytest
 
 from tests.unit.identity.fakes import TEST_SECRET, build_hasher
-from urbanopay.modules.identity.domain.value_objects import IdentityHasher, normalize_document
+from urbanopay_domains.identity.domain.value_objects import IdentityHasher, normalize_document
 
 
 @pytest.mark.unit
