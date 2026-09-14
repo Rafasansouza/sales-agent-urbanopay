@@ -10,7 +10,7 @@ paths:
 # Regra — Sales Agent Runtime
 
 **Documentos obrigatórios:** `docs/specs/SPEC-004-sales-agent-tools.md`,
-ADR-002, ADR-003, ADR-005, ADR-010, ADR-014.
+ADR-002, ADR-003, ADR-005, ADR-010, ADR-014, ADR-015.
 
 Leia a SPEC-004 antes de qualquer alteração neste módulo.
 
@@ -60,17 +60,43 @@ checkpoint durável do estado conversacional**.
   `ConversationState`, não o contrário.
 - `langgraph-checkpoint-postgres` **não** é dependência do projeto.
 
-⚠️ Nada disso está implementado. ADR-014 fixa direção; tabela, migration,
-repositório e grafo pertencem à **Etapa 2** da SPEC-004. A Etapa 1 é
-inteiramente determinística e não depende do grafo.
+### Onde cada peça vive
+
+```text
+application/conversation_service.py   ciclo de vida do turno
+application/sensitive_input.py        intercepta CPF/OTP antes do modelo
+application/reconciliation.py         backend vence o estado conversacional
+application/turn.py                   port TurnRunner (sem tipo de framework)
+infrastructure/graph/                 ÚNICO lugar que importa langgraph
+infrastructure/models.py              agent_conversations, agent_turn_requests
+infrastructure/repositories.py        CAS por version
+```
+
+`understand` e `respond` são os **únicos** nodes que falam com o modelo. `act`
+é determinístico: os playbooks decidem quais tools rodam e em que ordem.
 
 ## Provider de LLM
 
-Fonte: ADR-010.
+Fonte: ADR-010, ADR-015.
+
+```text
+                 ┌─ FakeLLMProvider     ← testes, CI e demo sem credencial
+LLMProvider Port ┤
+                 └─ OpenAILLMProvider   ← runtime com modelo real
+```
 
 - Nodes nunca instanciam SDK de provider diretamente. Use a abstração
-  `LLMProvider` / Model Router.
-- Baseline: Claude Sonnet 5, configurável.
+  `LLMProvider`.
+- Baseline do MVP: **OpenAI**, modelo vindo de `OPENAI_MODEL` — nunca
+  hardcoded (ADR-015 alterou a escolha de provider de ADR-010).
+- A SDK fica **inteiramente** encapsulada no adaptador: nenhum tipo dela
+  alcança `domain`, `application`, contrato de tool ou `ConversationState`.
+- `OPENAI_API_KEY` vive só no backend. Nunca em HTML, JS, browser, resposta,
+  log, estado do grafo, banco ou telemetria.
+- `LLM_PROVIDER=openai` sem chave **falha explicitamente**. Nunca fallback
+  silencioso para o Fake.
+- **Não existe caminho de negócio especial para o Fake**: os dois implementam
+  o mesmo port e devolvem os mesmos contratos.
 - Contratos internos tipados: `IntentResult`, `TripExtractionResult`,
   `ConfirmationResult`, `ModelResponse`.
 - Structured outputs passam por Pydantic **e** por validação de domínio.
@@ -182,14 +208,12 @@ Fonte: SPEC-004 §22.
 
 - **Etapa 1 (implementada):** tools, visibilidade, autorização, envelopes,
   presenters, guardas, idempotência, composition root, testes.
-- **Etapa 2 (arquiteturalmente desbloqueada pelo ADR-014, não implementada):**
-  LangGraph, `LLMProvider`, `FakeLLMProvider`, prompt, limites de §14, evals,
-  persistência conversacional.
-  ⚠️ **H-11 está resolvida; H-05 não.** Valide a compatibilidade de
-  `langgraph` com Python 3.13 **antes** de instalar a dependência.
-  Incompatibilidade exige novo ADR, não alteração silenciosa do ADR-013.
-- **Etapa 3:** HTTP de conversa, webhook HTTP, coordenador pós-pagamento
-  (SPEC-005 §10.1 / A-19), E2E, canal de OTP de demonstração (H-12).
+- **Etapa 2 (implementada):** LangGraph sem checkpointer, `LLMProvider` com
+  Fake e OpenAI, prompt, limite de tool calls por turno, evals, persistência
+  conversacional.
+- **Etapa 3 (implementada):** `POST /api/v1/agent/messages`, webhook de
+  pagamento, coordenador pós-pagamento (A-19), E2E da jornada do PRD §18,
+  canal de OTP de demonstração (H-12) e página de chat dev-only.
 
 ## Contexto e PII
 

@@ -1,15 +1,20 @@
 # Questões Abertas
 
 **Projeto:** UrbanoPay Mobilidade
-**Última atualização:** 2026-09-08
+**Última atualização:** 2026-09-13
 **Origem:** análise documental realizada no bootstrap do repositório, atualizada
 pela aceitação do ADR-012, pela persistence foundation, pelas implementações
 das SPEC-001 e SPEC-002, pela correção documental da state machine da
 SPEC-003 (C-01, C-02, A-03, A-09, A-10, A-13), pela implementação da SPEC-005
 (A-16, A-17, A-18), pela **Etapa 1 da SPEC-004** (A-19, A-20, A-21, e
-atualização de A-05, A-06 e H-11) e pela **aceitação do ADR-014**, que resolve
-H-11 e desbloqueia **arquiteturalmente** a Etapa 2 da SPEC-004 — a introdução
-do LangGraph continua dependendo de **H-05**, que permanece aberta.
+atualização de A-05, A-06 e H-11), pela **aceitação do ADR-014** (H-11) e pela
+**conclusão das Etapas 2 e 3 da SPEC-004**, que fecha **H-05** (parte
+`langgraph`), **H-07**, **H-12** e a implementação de **A-19**, e acrescenta
+**ADR-015** (provider OpenAI) e **ADR-016** (empacotamento em Docker).
+
+**Permanecem abertas** e explicitamente fora do caminho feliz: A-05, A-06,
+A-07, A-14, A-15, A-18, H-02, H-03, H-04, H-06, H-09, H-10 e a parte de H-05
+referente ao SDK do Mercado Pago.
 
 Nota de segurança registrada (evolução futura, sem item próprio): a sessão
 mantém o mesmo ID após a autenticação (decisão aprovada para o MVP); rotação
@@ -299,6 +304,13 @@ cenário cross-user que os testes de §14 exigem e o seed sugerido não cobria.
 Um seed demonstrativo oficial reproduzível poderá ser criado quando existir a
 jornada E2E real (SPEC-004) — decisão adiada, não esquecida.
 
+**Criado em 2026-09-13**, com a jornada E2E. Ele vive em
+`api/dev/seed.py` e é exposto por `POST /api/v1/dev/seed`, **fora de
+migration** — preservando a decisão original de que identidades e cartões não
+são dados de referência. É idempotente, existe apenas em `APP_ENV=local` e usa
+CPFs fictícios **distintos** dos das fixtures: seed e testes convivem no mesmo
+banco, e a unicidade do CPF normalizado é constraint.
+
 ---
 
 ## 🟡 A-14 — Três erros necessários não listados em SPEC-003 §16
@@ -467,9 +479,14 @@ acima dos dois módulos); o disparo é posterior ao commit, não é retentativa
 automática, e o caso não se perde — a capacidade de recuperação de §20.1
 localiza `Order PAID` sem `Fulfillment COMPLETED`.
 
-**O que falta:** o coordenador não existe. Sua implementação pertence à Etapa 3
-da SPEC-004 (§22), junto do webhook HTTP. Hoje `fulfill_order` só é alcançado
-por chamada explícita de backend — que é o que os testes fazem.
+**Implementado em 2026-09-13**, na Etapa 3 da SPEC-004:
+`urbanopay/coordination/post_payment.py`. Composição em processo, acima de
+`payments` e `fulfillment` — `payments` continua sem importar `fulfillment`.
+É acionado pelo webhook (`POST /api/v1/payments/webhook`) e pela reconciliação,
+sempre **depois** do commit financeiro, e apenas quando o Payment de fato
+convergiu para `APPROVED`. Falha de entrega é registrada e **não** propaga:
+propagá-la faria o provider reenviar o evento, e um Order pago sem entrega é
+caso de reconciliação, nunca de nova cobrança.
 
 **Sobre a necessidade de ADR (decidido em 2026-09-07):** um coordenador que
 seja apenas composição em processo — uma função que, após o commit, chama
@@ -619,9 +636,20 @@ ADR-013 fixou Python 3.13. As dependências instaladas no bootstrap
 - conexão assíncrona real contra PostgreSQL 17 coberta por teste de
   integração, incluindo retorno de `Decimal` para `NUMERIC`.
 
-**Permanece não validado:** `langgraph` e SDK do Mercado Pago. A validação é
-pré-requisito das SPEC-003 e SPEC-004. Incompatibilidade exige novo ADR, não
-alteração silenciosa do ADR-013.
+**`langgraph` validado empiricamente em 2026-09-13**, na implementação da
+SPEC-004: `langgraph 1.2.11` e `openai 3.13.0` resolvidos pelo `uv` em Python
+3.13.7 e registrados no `uv.lock`, com import e construção de grafo
+exercitados pela suíte. Transitivas relevantes: `langchain-core`,
+`langgraph-checkpoint` (apenas o core in-memory) e `langgraph-sdk`.
+
+⚠️ `langgraph-checkpoint-postgres` **não** foi adicionado, e não pode ser:
+ADR-014 rejeita checkpointer durável nativo, e um teste de arquitetura reprova
+sua presença no manifesto.
+
+**Permanece não validado:** SDK do Mercado Pago — o adaptador não existe, por
+falta de credencial de teste, e `FakePaymentProvider` é o sandbox do MVP
+(ADR-007). Incompatibilidade futura exige novo ADR, não alteração silenciosa
+do ADR-013.
 
 ### ✅ H-11 — Persistência das tabelas internas do LangGraph
 
@@ -712,7 +740,7 @@ Escopo `(operation, key)`; payload divergente ⇒ `IDEMPOTENCY_CONFLICT`.
 Retenção: registros concluídos **não são removidos** no MVP — são trilha de
 auditoria, não cache.
 
-### 🟡 H-07 — Tolerância ao código de saída 5 do pytest
+### ✅ H-07 — Tolerância ao código de saída 5 do pytest
 
 O pytest retorna **código 5** quando nenhum teste é coletado, o que reprovaria
 os alvos de teste e o job de CI de uma camada ainda vazia.
@@ -722,13 +750,14 @@ primeiros testes reais de integração, e a tolerância foi removida do
 `Makefile`, do `scripts/dev.ps1` e do job da CI. Zero testes coletados na
 camada `integration` agora **reprova** — que é a proteção que este item pedia.
 
-**Permanece para `e2e` e `evals`**, que seguem sem testes:
+**`e2e` e `evals`: ✅ resolvidas em 2026-09-13**, com a implementação da
+SPEC-004. A camada `e2e` ganhou a jornada do PRD §18 e a camada `eval` ganhou
+os casos adversariais de §16, ambas contra PostgreSQL real e providers falsos.
+A macro `run_optional_layer` saiu do `Makefile` e o switch `-AllowNoTests` saiu
+de `scripts/dev.ps1`; a CI passou a executar as duas camadas sem tolerância.
 
-- `e2e` — remover ao implementar a primeira jornada completa;
-- `eval` — remover ao criar o dataset de SPEC-004 §16.
-
-Pontos a alterar quando chegar a hora: a macro `run_optional_layer` no
-`Makefile` e o switch `-AllowNoTests` em `scripts/dev.ps1`.
+**Item integralmente fechado:** coleta vazia reprova em todas as quatro
+camadas.
 
 **Risco enquanto durar:** se a coleta por marcador quebrar nessas duas
 camadas, os testes desaparecem silenciosamente e a tolerância mascara o
@@ -780,7 +809,7 @@ Enquanto os logs de acesso ficarem fora do formato, a correlação por
 de acesso por middleware próprio instrumentado. A decisão pertence à tarefa de
 instrumentação de observabilidade, junto com o restante do ADR-008.
 
-### 🟡 H-12 — Exposição do OTP simulado na jornada demonstrativa
+### ✅ H-12 — Exposição do OTP simulado na jornada demonstrativa
 
 **Afeta:** SPEC-004 (demo E2E)
 **Origem:** decisão registrada na implementação da SPEC-002
@@ -790,11 +819,23 @@ aparece em resultado de serviço, log ou trace. **Não existe OTP fixo por
 configuração** — isso criaria um caminho permanente de autenticação conhecido
 (decisão aprovada). Testes usam um `FakeOtpGenerator` determinístico injetado.
 
-Consequência: hoje não há canal pelo qual o usuário da demonstração conheça o
-código. **É decisão pendente da demo, não falha da SPEC-002**: quando a
-SPEC-004 implementar a superfície de interação, deverá definir a exposição
-controlada do OTP simulado (ex.: painel de dev fora do contexto do LLM).
-O valor nunca pode chegar ao contexto do agente.
+**Resolvido em 2026-09-13**, na Etapa 3 da SPEC-004, com a solução mais
+restrita possível: um decorador do `OtpGenerator` guarda **em memória** o
+último código gerado, exposto por `GET /api/v1/dev/otp`.
+
+Restrições que tornam isso aceitável, e que não podem ser afrouxadas:
+
+- **não existe fora de `local`** — o router `dev` só é registrado quando
+  `settings.is_local`, e o decorador só é composto nesse caso. Não é checagem
+  em tempo de request que alguém possa contornar por configuração;
+- **não é tool do LLM**, sob nome algum. `get_otp` continua proibida
+  (SPEC-004 §7.4), e o valor nunca entra em prompt, estado, envelope,
+  telemetria ou tabela;
+- **memória apenas** — nada é persistido, nada é logado, e reiniciar o
+  processo apaga;
+- **não cria caminho de autenticação conhecido** — o código segue
+  criptograficamente aleatório. Continua não existindo OTP fixo por
+  configuração; o que mudou é a visibilidade local, não a geração.
 
 ### 🟠 H-10 — `CODEOWNERS` ausente
 
